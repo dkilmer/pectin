@@ -1,4 +1,4 @@
-#include "util.h"
+#include "misc_util.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
@@ -22,6 +22,14 @@ const char* load_file(const char *input_file_name) {
 
 float rand_float() {
 	return (float)(rand() % 10000) / 10000.0f;
+}
+
+int rand_int(int mod) {
+	return (rand() % mod);
+}
+
+unsigned int rand_uint(unsigned int mod) {
+	return ((unsigned int)rand() % mod);
 }
 
 unsigned char rand_ubyte(int mod) {

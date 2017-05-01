@@ -1,8 +1,6 @@
 #ifndef RENDER_UTIL_H
 #define RENDER_UTIL_H
 
-#define STB_IMAGE_IMPLEMENTATION
-#include <stb_image.h>
 #include <glad/glad.h>
 
 #if defined __cplusplus
@@ -10,26 +8,42 @@ extern "C" {
 #endif
 
 typedef struct render_buf {
-	int num_points;
+	int num_items;
 	int array_size;
+	int buf_idx;
+	int num_bufs;
+	int spr_idx;
+	GLuint shader;
 	GLuint vao;
-	GLuint vert_bo;
-	GLuint color_bo;
-	GLuint scale_rot_bo;
-	GLuint sprite_loc_bo;
-	GLfloat *points;
-	GLfloat *colors;
-	GLfloat *norm_scale_rots;
-	GLfloat *scale_rots;
-	GLfloat *sprite_locs;
+	GLuint vbo;
+	GLfloat *buf;
+	GLsync *fences;
 } render_buf;
 
+typedef struct sprite {
+	float x;
+	float y;
+	float z;
+	float r;
+	float g;
+	float b;
+	float scale_x;
+	float scale_y;
+	float rot;
+	float spr_row;
+	float spr_col;
+	float spr_extra;
+} sprite;
+
 GLint load_texture_to_uniform(const char *filename, const char *unif_name, GLuint shaderProgram, GLuint *tex, GLenum tex_num, GLint tex_idx);
-GLuint create_geom_shader_program(const char *vert_file_name, const char *geom_file_name, const char *frag_file_name);
+GLuint create_geom_shader_program(const char *vert_file_name, const char *geom_file_name, const char *frag_file_name, const char *tex_file_name, int tex_w, int tex_h, GLfloat *vp_mat);
 void free_geom_shader_program(GLuint shader_program);
-render_buf *create_render_buf(int num_points);
-void bind_render_buf(render_buf *rb, GLuint shader_program);
+void init_render_environment();
+render_buf *create_render_buf(int max_items, GLuint shader_program);
 void free_render_buf(render_buf *rb);
+void render_sprite(render_buf *rb, sprite *s);
+void render_sprites(render_buf *rb);
+void render_advance(render_buf *rb);
 
 #ifdef __cplusplus
 }

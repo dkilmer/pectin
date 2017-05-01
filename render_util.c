@@ -1,5 +1,8 @@
 #include "render_util.h"
-#include "util.h"
+#include "misc_util.h"
+#define STB_IMAGE_IMPLEMENTATION
+#include <stb_image.h>
+
 
 GLint load_texture_to_uniform(const char *filename, const char *unif_name, GLuint shaderProgram, GLuint *tex, GLenum tex_num, GLint tex_idx) {
 	int tw,th,tn;
@@ -21,7 +24,7 @@ GLint load_texture_to_uniform(const char *filename, const char *unif_name, GLuin
 	return texUnif;
 }
 
-GLuint create_geom_shader_program(const char *vert_file_name, const char *geom_file_name, const char *frag_file_name) {
+GLuint create_geom_shader_program(const char *vert_file_name, const char *geom_file_name, const char *frag_file_name, const char *tex_file_name, int tex_w, int tex_h, GLfloat *vp_mat) {
 	const GLchar* vertex_shader = load_file(vert_file_name);
 	const GLchar* geom_shader = load_file(geom_file_name);
 	const GLchar* fragment_shader = load_file(frag_file_name);
@@ -63,6 +66,15 @@ GLuint create_geom_shader_program(const char *vert_file_name, const char *geom_f
 	glAttachShader(shaderProgram, fragmentShader);
 	glBindFragDataLocation(shaderProgram, 0, "outColor");
 	glLinkProgram(shaderProgram);
+
+	glUseProgram(shaderProgram);
+	GLint viewProjUnif = glGetUniformLocation(shaderProgram, "vp");
+	glUniformMatrix4fv(viewProjUnif, 1, GL_FALSE, vp_mat);
+	GLint texMultUnif = glGetUniformLocation(shaderProgram, "tex_mult");
+	glUniform2f(texMultUnif, 1.0f / (float)tex_w, 1.0f / (float)tex_h);
+	GLuint tex;
+	GLint texUnif = load_texture_to_uniform(tex_file_name, "tex", shaderProgram, &tex, GL_TEXTURE0, 0);
+
 	return shaderProgram;
 }
 
@@ -70,111 +82,130 @@ void free_geom_shader_program(GLuint shader_program) {
 	glDeleteProgram(shader_program);
 }
 
-render_buf *create_render_buf(int num_points) {
+void init_render_environment() {
+	glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+	//glEnable(GL_DEPTH_TEST);
+	//glDepthFunc(GL_LESS);
+	//glEnable(GL_CULL_FACE);
+	//glCullFace(GL_FRONT);
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+}
+
+render_buf *create_render_buf(int max_items, GLuint shader_program) {
 	render_buf *rb = (render_buf *)malloc(sizeof(render_buf));
-	rb->num_points = num_points;
-	rb->array_size = num_points * 3 * sizeof(GLfloat);
-	rb->points = (GLfloat *)malloc((size_t)rb->array_size);
-	rb->colors = (GLfloat *)malloc((size_t)rb->array_size);
-	rb->norm_scale_rots = (GLfloat *)malloc((size_t)rb->array_size);
-	rb->scale_rots = (GLfloat *)malloc((size_t)rb->array_size);
-	rb->sprite_locs = (GLfloat *)malloc((size_t)rb->array_size);
+	rb->num_items = max_items;
+	rb->array_size = max_items * 12 * sizeof(GLfloat);
+	rb->num_bufs = 3;
+	rb->buf_idx = 0;
+	rb->spr_idx = 0;
+	rb->shader = shader_program;
+	rb->fences = (GLsync *)malloc(rb->num_bufs * sizeof(GLsync));
+	for (int i=0; i<rb->num_bufs; i++) rb->fences[i] = NULL;
+	//rb->buf = (GLfloat *)malloc((size_t)rb->array_size);
 	glGenVertexArrays(1, &rb->vao);
-	glGenBuffers(1, &rb->vert_bo);
-	glGenBuffers(1, &rb->color_bo);
-	glGenBuffers(1, &rb->scale_rot_bo);
-	glGenBuffers(1, &rb->sprite_loc_bo);
+	glGenBuffers(1, &rb->vbo);
 
 	GLenum err;
 	glBindVertexArray(rb->vao);
 	// the VBO of points (locations of sprites)
-	glBindBuffer(GL_ARRAY_BUFFER, rb->vert_bo);
-	glBufferData(GL_ARRAY_BUFFER, rb->array_size, rb->points, GL_STATIC_DRAW);
-	err = glGetError();
-	if (err != GL_NO_ERROR) {
-		printf("points buffer data: %d\n", err);
-	}
+	glBindBuffer(GL_ARRAY_BUFFER, rb->vbo);
 
-	// the VBO of colors
-	glBindBuffer(GL_ARRAY_BUFFER, rb->color_bo);
-	glBufferData(GL_ARRAY_BUFFER, rb->array_size, rb->colors, GL_STATIC_DRAW);
-	err = glGetError();
-	if (err != GL_NO_ERROR) {
-		printf("colors buffer data: %d\n", err);
-	}
-
-	// the VBO of x/y scale and rotation
-	glBindBuffer(GL_ARRAY_BUFFER, rb->scale_rot_bo);
-	glBufferData(GL_ARRAY_BUFFER, rb->array_size, rb->scale_rots, GL_STATIC_DRAW);
-	err = glGetError();
-	if (err != GL_NO_ERROR) {
-		printf("scale/rot buffer data: %d\n", err);
-	}
-
-	// the VBO of sprite row and columns
-	glBindBuffer(GL_ARRAY_BUFFER, rb->sprite_loc_bo);
-	glBufferData(GL_ARRAY_BUFFER, rb->array_size, rb->sprite_locs, GL_STATIC_DRAW);
-	err = glGetError();
-	if (err != GL_NO_ERROR) {
-		printf("sprite location buffer data: %d\n", err);
-	}
-
-	return rb;
-}
-
-void bind_render_buf(render_buf *rb, GLuint shader_program) {
-	GLenum err;
-	glBindVertexArray(rb->vao);
-	// map the position data to an input on the shader
-	glBindBuffer(GL_ARRAY_BUFFER, rb->vert_bo);
 	GLuint posAttrib = (GLuint)glGetAttribLocation(shader_program, "position");
 	glEnableVertexAttribArray(posAttrib);
-	glVertexAttribPointer(posAttrib, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), 0);
+	glVertexAttribPointer(posAttrib, 3, GL_FLOAT, GL_FALSE, 12 * sizeof(GLfloat), 0);
 	err = glGetError();
 	if (err != GL_NO_ERROR) {
 		printf("posAttrib is %d: %d\n", posAttrib, err);
 	}
 
 	// map the color data to an input on the shader
-	glBindBuffer(GL_ARRAY_BUFFER, rb->color_bo);
 	GLuint colorAttrib = (GLuint)glGetAttribLocation(shader_program, "color");
 	glEnableVertexAttribArray(colorAttrib);
-	glVertexAttribPointer(colorAttrib, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), 0);
+	glVertexAttribPointer(colorAttrib, 3, GL_FLOAT, GL_FALSE, 12 * sizeof(GLfloat), (void *)(3 * sizeof(GLfloat)));
 	err = glGetError();
 	if (err != GL_NO_ERROR) {
 		printf("colorAttrib is %d: %d\n", colorAttrib, err);
 	}
 
 	// map the scale/rotation data to an input on the shader
-	glBindBuffer(GL_ARRAY_BUFFER, rb->scale_rot_bo);
 	GLuint scaleRotAttrib = (GLuint)glGetAttribLocation(shader_program, "scale_rot");
 	glEnableVertexAttribArray(scaleRotAttrib);
-	glVertexAttribPointer(scaleRotAttrib, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), 0);
+	glVertexAttribPointer(scaleRotAttrib, 3, GL_FLOAT, GL_FALSE, 12 * sizeof(GLfloat), (void *)(6 * sizeof(GLfloat)));
 	err = glGetError();
 	if (err != GL_NO_ERROR) {
 		printf("scaleRotAttrib is %d: %d\n", scaleRotAttrib, err);
 	}
 
-	glBindBuffer(GL_ARRAY_BUFFER, rb->sprite_loc_bo);
+	// map the sprite location data to an input on the shader
 	GLuint sprOffsetAttrib = (GLuint)glGetAttribLocation(shader_program, "spr_offset");
 	glEnableVertexAttribArray(sprOffsetAttrib);
-	glVertexAttribPointer(sprOffsetAttrib, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), 0);
+	glVertexAttribPointer(sprOffsetAttrib, 3, GL_FLOAT, GL_FALSE, 12 * sizeof(GLfloat), (void *)(9 * sizeof(GLfloat)));
 	err = glGetError();
 	if (err != GL_NO_ERROR) {
 		printf("sprOffsetAttrib is %d: %d\n", sprOffsetAttrib, err);
 	}
-}
 
+	glBufferData(GL_ARRAY_BUFFER, rb->array_size * rb->num_bufs, NULL, GL_STREAM_DRAW);
+	err = glGetError();
+	if (err != GL_NO_ERROR) {
+		printf("buffer data: %d\n", err);
+	}
+
+	return rb;
+}
 
 void free_render_buf(render_buf *rb) {
-	glDeleteBuffers(1, &rb->vert_bo);
-	glDeleteBuffers(1, &rb->color_bo);
-	glDeleteBuffers(1, &rb->scale_rot_bo);
-	glDeleteBuffers(1, &rb->sprite_loc_bo);
+	glDeleteBuffers(1, &rb->vbo);
 	glDeleteVertexArrays(1, &rb->vao);
-	free(rb->points);
-	free(rb->colors);
-	free(rb->norm_scale_rots);
-	free(rb->scale_rots);
-	free(rb->sprite_locs);
+	free(rb->fences);
+	//free(rb->buf);
 }
+
+void render_sprite(render_buf *rb, sprite *s) {
+	// just starting a buffer. we need to wait and map on that shit
+	if (rb->spr_idx == 0) {
+		glBindVertexArray(rb->vao);
+		if (rb->fences[rb->buf_idx] != NULL) {
+			GLenum state = glClientWaitSync(rb->fences[rb->buf_idx], GL_SYNC_FLUSH_COMMANDS_BIT, 1000000000);
+			if (state == GL_TIMEOUT_EXPIRED || state == GL_WAIT_FAILED) {
+				printf("wait for fence on buf_idx %d failed with error %d\n", rb->buf_idx, state);
+			}
+			glDeleteSync(rb->fences[rb->buf_idx]);
+			rb->fences[rb->buf_idx] = NULL;
+		}
+		glBindBuffer(GL_ARRAY_BUFFER, rb->vbo);
+		int map_start = rb->buf_idx * rb->num_items * 12 * sizeof(GLfloat);
+		int buf_len = rb->num_items * 12 * sizeof(GLfloat);
+		rb->buf = (GLfloat *)glMapBufferRange(GL_ARRAY_BUFFER, map_start, buf_len, GL_MAP_WRITE_BIT|GL_MAP_UNSYNCHRONIZED_BIT);
+		if (rb->buf == NULL) printf("failed to map buffer for buf_idx %d\n", rb->buf_idx);
+	}
+	if (rb->spr_idx == rb->num_items) {
+		printf("can't render to buf_idx %d: overflow\n", rb->buf_idx);
+		return;
+	}
+	GLfloat *spr_buf = rb->buf + (rb->spr_idx * 12 * sizeof(GLfloat));
+	memcpy(spr_buf, s, sizeof(sprite));
+	rb->spr_idx++;
+}
+
+void render_sprites(render_buf *rb) {
+	glBindVertexArray(rb->vao);
+	glBindBuffer(GL_ARRAY_BUFFER, rb->vbo);
+	glUseProgram(rb->shader);
+	if (rb->spr_idx > 0) {
+		glDrawArrays(GL_POINTS, rb->buf_idx * rb->num_items, rb->spr_idx);
+	}
+}
+
+void render_advance(render_buf *rb) {
+	glBindVertexArray(rb->vao);
+	glBindBuffer(GL_ARRAY_BUFFER, rb->vbo);
+	glUnmapBuffer(GL_ARRAY_BUFFER);
+	rb->fences[rb->buf_idx] = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	glBindVertexArray(0);
+	rb->buf_idx = ((rb->buf_idx + 1) % rb->num_bufs);
+	rb->spr_idx = 0;
+};
+

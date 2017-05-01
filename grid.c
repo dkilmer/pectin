@@ -16,31 +16,39 @@
 // so that those indices can be used to draw the newly visible
 // sprites above.
 //
+// The grid is actually 2 tiles wider and 2 tiles higher than the
+// specified dimensions. This way, you can scroll the camera fractions
+// of tiles and still render everything you need to render. But
+// you need to be careful and render blanks (or skip rendering) when
+// gx and gy are out of range (<0, >=full_w, >=full_h).
+//
 // In this grid, "head" is at the bottom left
 
-grid *create_grid(int w, int h) {
+grid *create_grid(int w, int h, int full_w, int full_h, int sx, int sy) {
 	grid *g = (grid *)malloc(sizeof(grid));
 	g->w = w;
 	g->h = h;
+	g->full_w = full_w;
+	g->full_h = full_h;
 	// create the first row
-	g->head = (sprot *)malloc(sizeof(sprot));
-	sprot *ss = g->head;
+	g->head = (tile *)malloc(sizeof(tile));
+	tile *ss = g->head;
 	ss->thing = 0;
-	ss->gx = 0;
-	ss->gy = 0;
-	add_cols(ss, w-1);
+	ss->gx = sx-1;
+	ss->gy = sy-1;
+	add_cols(ss, w+1);
 	// now add the rows
 	int cnt = 0;
-	while (cnt < (h-1)) {
+	while (cnt < (h+1)) {
 		// create a new row
-		sprot *ns = (sprot *)malloc(sizeof(sprot));
+		tile *ns = (tile *)malloc(sizeof(tile));
 		ns->thing = 0;
 		ns->gx = ss->gx;
 		ns->gy = ss->gy+1;
-		add_cols(ns, w-1);
+		add_cols(ns, w+1);
 		// now hook up this row to the previous one
-		sprot *sss = ss;
-		sprot *nss = ns;
+		tile *sss = ss;
+		tile *nss = ns;
 		while (nss != NULL) {
 			sss->next_row = nss;
 			nss->prev_row = sss;
@@ -56,12 +64,12 @@ grid *create_grid(int w, int h) {
 	return g;
 }
 
-void add_cols(sprot *s, int num) {
-	sprot *ss = s;
+void add_cols(tile *s, int num) {
+	tile *ss = s;
 	ss->prev_col = NULL;
 	int cnt = 0;
 	while (cnt < num) {
-		sprot *ns = (sprot *)malloc(sizeof(sprot));
+		tile *ns = (tile *)malloc(sizeof(tile));
 		ns->thing = 0;
 		ns->gx = ss->gx + 1;
 		ns->gy = ss->gy;
@@ -75,8 +83,8 @@ void add_cols(sprot *s, int num) {
 	}
 }
 
-sprot *get_col_foot(sprot *s) {
-	sprot *ss = s;
+tile *get_col_foot(tile *s) {
+	tile *ss = s;
 	while (ss != NULL) {
 		if (ss->next_col == NULL) return ss;
 		ss = ss->next_col;
@@ -84,8 +92,8 @@ sprot *get_col_foot(sprot *s) {
 	return NULL;
 }
 
-sprot *get_row_foot(sprot *s) {
-	sprot *ss = s;
+tile *get_row_foot(tile *s) {
+	tile *ss = s;
 	while (ss != NULL) {
 		if (ss->next_row == NULL) return ss;
 		ss = ss->next_row;
@@ -94,14 +102,14 @@ sprot *get_row_foot(sprot *s) {
 }
 
 void destroy_grid(grid *g) {
-	sprot *h = g->head;
+	tile *h = g->head;
 	while (h != NULL) {
-		sprot *s = h;
+		tile *s = h;
 		// move h to the next row before we start nuking the row
 		h = h->next_row;
 		while (s != NULL) {
-			sprot *d = s;
-			// move s to the next col before we nuke the sprot
+			tile *d = s;
+			// move s to the next col before we nuke the tile
 			s = s->next_col;
 			free(d);
 		}
@@ -111,13 +119,13 @@ void destroy_grid(grid *g) {
 
 int move_grid_left(grid *g) {
 	if (g->head->gx == 0) return 0;
-	sprot *new_head = g->cols_foot;
-	sprot *new_cols_foot = new_head->prev_col;
-	sprot *new_rows_foot = NULL;
+	tile *new_head = g->cols_foot;
+	tile *new_cols_foot = new_head->prev_col;
+	tile *new_rows_foot = NULL;
 
 	// h walks down the left side, s walks down the right
-	sprot *h = g->head;
-	sprot *s = g->cols_foot;
+	tile *h = g->head;
+	tile *s = g->cols_foot;
 	while (s != NULL) {
 		s->prev_col->next_col = NULL;
 		s->next_col = h;
@@ -137,14 +145,14 @@ int move_grid_left(grid *g) {
 }
 
 int move_grid_right(grid *g) {
-	if (g->cols_foot->gx >= (g->r-1)) return 0;
-	sprot *new_head = g->head->next_col;
-	sprot *new_cols_foot = new_head->prev_col;
-	sprot *new_rows_foot = NULL;
+	if (g->cols_foot->gx >= (g->full_w-1)) return 0;
+	tile *new_head = g->head->next_col;
+	tile *new_cols_foot = new_head->prev_col;
+	tile *new_rows_foot = NULL;
 
 	// h walks down the left side, s walks down the right
-	sprot *h = g->head;
-	sprot *s = g->cols_foot;
+	tile *h = g->head;
+	tile *s = g->cols_foot;
 	while (s != NULL) {
 		h->next_col->prev_col = NULL;
 		s->next_col = h;
@@ -165,13 +173,13 @@ int move_grid_right(grid *g) {
 
 int move_grid_down(grid *g) {
 	if (g->head->gy == 0) return 0;
-	sprot *new_head = g->rows_foot;
-	sprot *new_cols_foot = NULL;
-	sprot *new_rows_foot = new_head->prev_row;
+	tile *new_head = g->rows_foot;
+	tile *new_cols_foot = NULL;
+	tile *new_rows_foot = new_head->prev_row;
 
 	// h walks across the top, s walks across the bottom
-	sprot *h = g->head;
-	sprot *s = g->rows_foot;
+	tile *h = g->head;
+	tile *s = g->rows_foot;
 	while (s != NULL) {
 		s->prev_row->next_row = NULL;
 		s->next_row = h;
@@ -187,14 +195,14 @@ int move_grid_down(grid *g) {
 }
 
 int move_grid_up(grid *g) {
-	if (g->rows_foot->gy >= (g->b-1)) return 0;
-	sprot *new_head = g->head->next_row;
-	sprot *new_cols_foot = NULL;
-	sprot *new_rows_foot = new_head->prev_row;
+	if (g->rows_foot->gy >= (g->full_h-1)) return 0;
+	tile *new_head = g->head->next_row;
+	tile *new_cols_foot = NULL;
+	tile *new_rows_foot = new_head->prev_row;
 
 	// h walks across the top, s walks across the bottom
-	sprot *h = g->head;
-	sprot *s = g->rows_foot;
+	tile *h = g->head;
+	tile *s = g->rows_foot;
 	while (s != NULL) {
 		h->next_row->prev_row = NULL;
 		s->next_row = h;
@@ -211,9 +219,9 @@ int move_grid_up(grid *g) {
 }
 
 void print_grid(grid *g) {
-	sprot *s = g->head;
+	tile *s = g->head;
 	while (s != NULL) {
-		sprot *cs = s;
+		tile *cs = s;
 		while (cs != NULL) {
 			printf("(%02d,%02d) ", cs->gx, cs->gy);
 			cs = cs->next_col;
@@ -221,4 +229,8 @@ void print_grid(grid *g) {
 		printf("\n");
 		s = s->next_row;
 	}
+}
+
+unsigned int tile_count(grid *g) {
+	return (unsigned int)((g->w + 2) * (g->h + 2));
 }

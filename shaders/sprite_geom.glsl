@@ -5,7 +5,7 @@ layout(triangle_strip, max_vertices = 4) out;
 
 in vec3 Color[];
 in vec3 ScaleRot[];
-in vec2 SprOffset[];
+in vec3 SprOffset[];
 
 smooth out vec3 FColor;
 out vec2 TexCoord;

@@ -13,7 +13,6 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${PROJECT_SOURCE_DIR}/cmake")
 set(CMAKE_MACOSX_RPATH 1)
 
 include_directories("deps/glad/include/"
-        "deps/glm/"
         "deps/stb"
         ${SDL2_INCLUDE_DIR}
         ${SDLMIXER_INCLUDE_DIR})
@@ -37,7 +36,7 @@ add_executable(${PROJECT_NAME} ${PROJECT_SOURCES}
         ${PROJECT_HEADERS}
         ${PROJECT_SHADERS}
         ${PROJECT_CONFIGS}
-        ${DEPS_SOURCES} window.cpp window.h render_util.c render_util.h util.c util.h)
+        ${DEPS_SOURCES} window.cpp window.h render_util.c render_util.h misc_util.c misc_util.h game_util.c game_util.h)
 
 set_target_properties(${PROJECT_NAME} PROPERTIES
         LINKER_FLAGS "/ignore:4099")

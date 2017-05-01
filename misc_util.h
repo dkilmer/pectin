@@ -11,6 +11,8 @@ extern "C" {
 const char* load_file(const char *input_file_name);
 float rand_float();
 unsigned char rand_ubyte(int mod);
+int rand_int(int mod);
+unsigned int rand_uint(unsigned int mod);
 float oscillate(float val, float min, float range);
 float elastic(float p);
 
