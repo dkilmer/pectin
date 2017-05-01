@@ -95,7 +95,7 @@ void init_render_environment() {
 render_buf *create_render_buf(int max_items, GLuint shader_program) {
 	render_buf *rb = (render_buf *)malloc(sizeof(render_buf));
 	rb->num_items = max_items;
-	rb->array_size = max_items * 12 * sizeof(GLfloat);
+	rb->array_size = rb->num_items * 12 * sizeof(GLfloat);
 	rb->num_bufs = 3;
 	rb->buf_idx = 0;
 	rb->spr_idx = 0;
@@ -194,7 +194,7 @@ void render_sprites(render_buf *rb) {
 	glBindBuffer(GL_ARRAY_BUFFER, rb->vbo);
 	glUseProgram(rb->shader);
 	if (rb->spr_idx > 0) {
-		glDrawArrays(GL_POINTS, rb->buf_idx * rb->num_items, rb->spr_idx);
+		glDrawArrays(GL_POINTS, rb->buf_idx * rb->num_items, rb->spr_idx*4);
 	}
 }
 

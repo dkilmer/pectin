@@ -401,7 +401,7 @@ mat4_t m4_ortho(float left, float right, float bottom, float top, float back, fl
 	return mat4(
 		 2 / (r - l),  0,            0,            tx,
 		 0,            2 / (t - b),  0,            ty,
-		 0,            0,            2 / (f - n),  tz,
+		 0,            0,            -2 / (f - n),  tz,
 		 0,            0,            0,            1
 	);
 }
