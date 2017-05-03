@@ -38,8 +38,9 @@ typedef struct layer {
 } layer;
 
 void init_screen(screen_def *s, int sw, int sh, int ts);
+void update_proj_mat(screen_def *s);
 void print_screen_def(screen_def *s);
-void get_tile_range(screen_def *s, tile_range *tr);
+void get_tile_range(screen_def *s, tile_range *tr, tile_range *level_range);
 
 
 #ifdef __cplusplus

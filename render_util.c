@@ -78,6 +78,12 @@ GLuint create_geom_shader_program(const char *vert_file_name, const char *geom_f
 	return shaderProgram;
 }
 
+void update_view_mat(render_buf *rb, GLfloat *mat) {
+	glUseProgram(rb->shader);
+	GLint viewProjUnif = glGetUniformLocation(rb->shader, "vp");
+	glUniformMatrix4fv(viewProjUnif, 1, GL_FALSE, mat);
+}
+
 void free_geom_shader_program(GLuint shader_program) {
 	glDeleteProgram(shader_program);
 }
@@ -88,6 +94,7 @@ void init_render_environment() {
 	//glDepthFunc(GL_LESS);
 	//glEnable(GL_CULL_FACE);
 	//glCullFace(GL_FRONT);
+	glDisable(GL_CLIP_PLANE0);
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 }
@@ -184,8 +191,19 @@ void render_sprite(render_buf *rb, sprite *s) {
 		printf("can't render to buf_idx %d: overflow\n", rb->buf_idx);
 		return;
 	}
-	GLfloat *spr_buf = rb->buf + (rb->spr_idx * 12 * sizeof(GLfloat));
-	memcpy(spr_buf, s, sizeof(sprite));
+	int idx = rb->spr_idx * 12;
+	rb->buf[idx++] = s->x;
+	rb->buf[idx++] = s->y;
+	rb->buf[idx++] = s->z;
+	rb->buf[idx++] = s->r;
+	rb->buf[idx++] = s->g;
+	rb->buf[idx++] = s->b;
+	rb->buf[idx++] = s->scale_x;
+	rb->buf[idx++] = s->scale_y;
+	rb->buf[idx++] = s->rot;
+	rb->buf[idx++] = s->spr_row;
+	rb->buf[idx++] = s->spr_col;
+	rb->buf[idx] = s->spr_extra;
 	rb->spr_idx++;
 }
 

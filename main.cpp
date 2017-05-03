@@ -70,6 +70,7 @@ void run() {
 
 	screen_def sd;
 	init_screen(&sd, 512, 320, 32);
+	//glViewport(-32, -32, 512, 320);
 	print_screen_def(&sd);
 
 	GLuint shader = create_geom_shader_program(
@@ -80,10 +81,11 @@ void run() {
 	  8, 8,
 		(GLfloat *)&sd.vp_mat
 	);
-	render_buf *rb = create_render_buf(216, shader);
+	render_buf *rb = create_render_buf(300, shader);
 	sprite *s = (sprite *)malloc(sizeof(sprite));
+	tile_range lr = {0, 32, 0, 20};
 	tile_range tr;
-	get_tile_range(&sd, &tr);
+	get_tile_range(&sd, &tr, &lr);
 	bool cam_moved = false;
 	init_render_environment();
 	printf("l=%d, r=%d, t=%d, b=%d\n", tr.l, tr.r, tr.t, tr.b);
@@ -101,39 +103,35 @@ void run() {
 		if (kpress[KEY_QUIT]) {
 			loop = false;
 		} else if (kdown[KEY_LEFT]) {
-			if (sd.cam_pos.x > 8.0f) {
-				sd.cam_pos.x -= 0.1f;
-				cam_moved = true;
-			}
+			sd.cam_pos.x -= 0.25f;
+			if (sd.cam_pos.x < 8.0f) sd.cam_pos.x = 8.0f;
+			cam_moved = true;
 		} else if (kdown[KEY_RIGHT]) {
-			if (sd.cam_pos.x < 24.0f) {
-				sd.cam_pos.x += 1.0f;
-				cam_moved = true;
-			}
+			sd.cam_pos.x += 0.25f;
+			cam_moved = true;
+			if (sd.cam_pos.x > 24.0f) sd.cam_pos.x = 24.0f;
 		} else if (kdown[KEY_UP]) {
-			if (sd.cam_pos.y < 15.0f) {
-				sd.cam_pos.y += 0.1f;
-				cam_moved = true;
-			}
+			sd.cam_pos.y += 0.25f;
+			if (sd.cam_pos.y > 15.0f) sd.cam_pos.y = 15.0f;
+			cam_moved = true;
 		} else if (kdown[KEY_DOWN]) {
-			if (sd.cam_pos.y > 5.0f) {
-				sd.cam_pos.y -= 0.1f;
-				cam_moved = true;
-			}
+			sd.cam_pos.y -= 0.25f;
+			if (sd.cam_pos.y < 5.0f) sd.cam_pos.y = 5.0f;
+			cam_moved = true;
 		}
 		if (cam_moved) {
+			update_proj_mat(&sd);
+			update_view_mat(rb, (GLfloat *)&sd.vp_mat);
 			int cnt = 0;
 			render_advance(rb);
-			get_tile_range(&sd, &tr);
-			printf("l=%d, r=%d, t=%d, b=%d\n", tr.l, tr.r, tr.t, tr.b);
+			get_tile_range(&sd, &tr, &lr);
+			//printf("l=%d, r=%d, t=%d, b=%d\n", tr.l, tr.r, tr.t, tr.b);
 			for (int x=tr.l; x<tr.r; x++) {
 				for (int y=tr.b; y<tr.t; y++) {
 					int off = ((19-y)*32)+x;
 					int idx = level[off];
 					sprite_for(x, y, idx, s);
-					printf("cnt=%d, x=%d, y=%d, off=%d, idx=%d\n", cnt, x, y, off, idx);
 					render_sprite(rb, s);
-					//printf("%d\n", cnt);
 					cnt++;
 				}
 			}

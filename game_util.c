@@ -15,6 +15,10 @@ void init_screen(screen_def *s, int sw, int sh, int ts) {
 	s->cam_pos.x = s->half_w;
 	s->cam_pos.y = s->half_h;
 	s->cam_pos.z = 10.0f;
+	update_proj_mat(s);
+}
+
+void update_proj_mat(screen_def *s) {
 	vec3_t cat = {s->cam_pos.x, s->cam_pos.y, 0.0f};
 	vec3_t up = {0.0f, 1.0f, 0.0f};
 	mat4_t p_mat = m4_ortho(-s->half_w, s->half_w, -s->half_h, s->half_h, s->far, s->near);
@@ -22,6 +26,7 @@ void init_screen(screen_def *s, int sw, int sh, int ts) {
 	mat4_t m_mat = m4_identity();
 	s->vp_mat = m4_mul(m4_mul(p_mat, v_mat), m_mat);
 }
+
 
 void print_screen_def(screen_def *s) {
 	printf("screen_w: %d\n", s->screen_w);
@@ -35,9 +40,17 @@ void print_screen_def(screen_def *s) {
 	printf("cam_pos: x=%f, y=%f, z=%f\n", s->cam_pos.x, s->cam_pos.y, s->cam_pos.z);
 }
 
-void get_tile_range(screen_def *s, tile_range *tr) {
+void get_tile_range(screen_def *s, tile_range *tr, tile_range *level_range) {
 	tr->l = (int)floorf(s->cam_pos.x - s->half_w);
 	tr->r = (int)ceilf(s->cam_pos.x + s->half_w);
 	tr->b = (int)floorf(s->cam_pos.y - s->half_h);
 	tr->t = (int)ceilf(s->cam_pos.y + s->half_h);
+	tr->l--;
+	tr->r++;
+	tr->b--;
+	tr->t++;
+	if (tr->l < level_range->l) tr->l = level_range->l;
+	if (tr->b < level_range->b) tr->b = level_range->b;
+	if (tr->r > level_range->r) tr->r = level_range->r;
+	if (tr->t > level_range->t) tr->t = level_range->t;
 }

@@ -38,6 +38,7 @@ typedef struct sprite {
 GLint load_texture_to_uniform(const char *filename, const char *unif_name, GLuint shaderProgram, GLuint *tex, GLenum tex_num, GLint tex_idx);
 GLuint create_geom_shader_program(const char *vert_file_name, const char *geom_file_name, const char *frag_file_name, const char *tex_file_name, int tex_w, int tex_h, GLfloat *vp_mat);
 void free_geom_shader_program(GLuint shader_program);
+void update_view_mat(render_buf *rb, GLfloat *mat);
 void init_render_environment();
 render_buf *create_render_buf(int max_items, GLuint shader_program);
 void free_render_buf(render_buf *rb);
