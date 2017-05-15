@@ -12,6 +12,7 @@ GLint load_texture_to_uniform(const char *filename, const char *unif_name, GLuin
 	glGenTextures(1, tex);
 	glActiveTexture(tex_num);
 	glBindTexture(GL_TEXTURE_2D, *tex);
+	printf("TEXTURE ID is %d, tex_num is %d, tex_idx is %d\n", *tex, tex_num, tex_idx);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tw, th, 0, GL_RGBA, GL_UNSIGNED_BYTE, image_data);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
@@ -24,7 +25,7 @@ GLint load_texture_to_uniform(const char *filename, const char *unif_name, GLuin
 	return texUnif;
 }
 
-GLuint create_geom_shader_program(const char *vert_file_name, const char *geom_file_name, const char *frag_file_name, const char *tex_file_name, int tex_w, int tex_h, GLfloat *vp_mat) {
+GLuint create_geom_shader_program(const char *vert_file_name, const char *geom_file_name, const char *frag_file_name, const char *tex_file_name, int tex_w, int tex_h, GLfloat *vp_mat, GLuint *tex_id) {
 	const GLchar* vertex_shader = load_file(vert_file_name);
 	const GLchar* geom_shader = load_file(geom_file_name);
 	const GLchar* fragment_shader = load_file(frag_file_name);
@@ -74,6 +75,7 @@ GLuint create_geom_shader_program(const char *vert_file_name, const char *geom_f
 	glUniform2f(texMultUnif, 1.0f / (float)tex_w, 1.0f / (float)tex_h);
 	GLuint tex;
 	GLint texUnif = load_texture_to_uniform(tex_file_name, "tex", shaderProgram, &tex, GL_TEXTURE0, 0);
+	*tex_id = tex;
 
 	return shaderProgram;
 }
@@ -89,7 +91,7 @@ void free_geom_shader_program(GLuint shader_program) {
 }
 
 void init_render_environment() {
-	glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+	glClearColor(0.12f, 0.12f, 0.12f, 1.0f);
 	//glEnable(GL_DEPTH_TEST);
 	//glDepthFunc(GL_LESS);
 	//glEnable(GL_CULL_FACE);
@@ -99,7 +101,7 @@ void init_render_environment() {
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 }
 
-render_buf *create_render_buf(int max_items, GLuint shader_program) {
+render_buf *create_render_buf(int max_items, GLuint shader_program, GLuint tex_id) {
 	render_buf *rb = (render_buf *)malloc(sizeof(render_buf));
 	rb->num_items = max_items;
 	rb->array_size = rb->num_items * 12 * sizeof(GLfloat);
@@ -107,6 +109,7 @@ render_buf *create_render_buf(int max_items, GLuint shader_program) {
 	rb->buf_idx = 0;
 	rb->spr_idx = 0;
 	rb->shader = shader_program;
+	rb->tex_id = tex_id;
 	rb->fences = (GLsync *)malloc(rb->num_bufs * sizeof(GLsync));
 	for (int i=0; i<rb->num_bufs; i++) rb->fences[i] = NULL;
 	//rb->buf = (GLfloat *)malloc((size_t)rb->array_size);
@@ -208,6 +211,8 @@ void render_sprite(render_buf *rb, sprite *s) {
 }
 
 void render_sprites(render_buf *rb) {
+	//glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, rb->tex_id);
 	glBindVertexArray(rb->vao);
 	glBindBuffer(GL_ARRAY_BUFFER, rb->vbo);
 	glUseProgram(rb->shader);

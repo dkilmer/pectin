@@ -1,3 +1,4 @@
+#define MATH_3D_IMPLEMENTATION
 #include "game_util.h"
 
 void init_screen(screen_def *s, int sw, int sh, int ts) {
@@ -26,7 +27,6 @@ void update_proj_mat(screen_def *s) {
 	mat4_t m_mat = m4_identity();
 	s->vp_mat = m4_mul(m4_mul(p_mat, v_mat), m_mat);
 }
-
 
 void print_screen_def(screen_def *s) {
 	printf("screen_w: %d\n", s->screen_w);

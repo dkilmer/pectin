@@ -14,6 +14,7 @@ typedef struct render_buf {
 	int num_bufs;
 	int spr_idx;
 	GLuint shader;
+	GLuint tex_id;
 	GLuint vao;
 	GLuint vbo;
 	GLfloat *buf;
@@ -36,11 +37,11 @@ typedef struct sprite {
 } sprite;
 
 GLint load_texture_to_uniform(const char *filename, const char *unif_name, GLuint shaderProgram, GLuint *tex, GLenum tex_num, GLint tex_idx);
-GLuint create_geom_shader_program(const char *vert_file_name, const char *geom_file_name, const char *frag_file_name, const char *tex_file_name, int tex_w, int tex_h, GLfloat *vp_mat);
+GLuint create_geom_shader_program(const char *vert_file_name, const char *geom_file_name, const char *frag_file_name, const char *tex_file_name, int tex_w, int tex_h, GLfloat *vp_mat, GLuint *tex_id);
 void free_geom_shader_program(GLuint shader_program);
 void update_view_mat(render_buf *rb, GLfloat *mat);
 void init_render_environment();
-render_buf *create_render_buf(int max_items, GLuint shader_program);
+render_buf *create_render_buf(int max_items, GLuint shader_program, GLuint tex_id);
 void free_render_buf(render_buf *rb);
 void render_sprite(render_buf *rb, sprite *s);
 void render_sprites(render_buf *rb);

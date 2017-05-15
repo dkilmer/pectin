@@ -1,7 +1,7 @@
 #ifndef SCREEN_UTIL_H
 #define SCREEN_UTIL_H
 
-#define MATH_3D_IMPLEMENTATION
+#include <stdbool.h>
 #include "math_3d.h"
 
 #if defined __cplusplus
@@ -30,12 +30,20 @@ typedef struct screen_def {
 	mat4_t vp_mat;
 } screen_def;
 
-typedef struct layer {
-	int layer_z;
-	int level_w;
-	int level_h;
-	int *things;
-} layer;
+typedef struct kobj {
+	float x;
+	float y;
+	float vx;
+	float vy;
+	float rx;
+	float ry;
+	bool in_air;
+	bool jumping;
+	bool cut_jump;
+	bool can_jump;
+	bool moving_left;
+	bool moving_right;
+} kobj;
 
 void init_screen(screen_def *s, int sw, int sh, int ts);
 void update_proj_mat(screen_def *s);

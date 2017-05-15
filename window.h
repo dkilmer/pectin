@@ -23,6 +23,7 @@ extern "C" {
 
 extern SDL_Window *main_window;
 extern SDL_GLContext main_context;
+extern SDL_GameController *controller;
 
 bool init_window(const char *program_name, int w, int h);
 void cleanup_window();

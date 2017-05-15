@@ -3,11 +3,12 @@
 
 SDL_Window *main_window;
 SDL_GLContext main_context;
+SDL_GameController *controller;
 
 bool init_window(const char *program_name, int w, int h)
 {
 	// Initialize SDL's Video subsystem
-	if (SDL_Init(SDL_INIT_VIDEO) < 0) {
+	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_JOYSTICK | SDL_INIT_GAMECONTROLLER | SDL_INIT_EVENTS) < 0) {
 		printf("SDL_Init failed\n");
 		return false;
 	}
@@ -47,6 +48,26 @@ bool init_window(const char *program_name, int w, int h)
 		return -1;
 	}
 
+	// Init a game controller if there is one
+	controller = NULL;
+	int num_js = SDL_NumJoysticks();
+	if (num_js > 0) {
+		controller = SDL_GameControllerOpen(0);
+		if (controller != NULL) {
+			int controller_state = SDL_GameControllerEventState(SDL_ENABLE);
+			printf("controller state: %d\n", controller_state);
+			if (SDL_GameControllerMapping(controller) == NULL) {
+				printf("no mapping for controller\n");
+			}
+			const char *cn = SDL_GameControllerName(controller);
+			printf("controller name: %s\n", cn);
+		} else {
+			printf("unable to initialize controller\n");
+		}
+	} else {
+		printf("no controllers attached\n");
+	}
+
 	return true;
 }
 
@@ -54,6 +75,9 @@ void cleanup_window()
 {
 	SDL_GL_DeleteContext(main_context);
 	SDL_DestroyWindow(main_window);
+	if (controller != NULL) {
+		SDL_GameControllerClose(controller);
+	}
 	SDL_Quit();
 }
 
@@ -81,7 +105,101 @@ void get_input(bool *downs, bool *presses, const int *key_map) {
 			downs[KEY_QUIT] = true;
 			presses[KEY_QUIT] = true;
 		}
-		if (e.type == SDL_KEYDOWN) {
+		if (e.type == SDL_CONTROLLERBUTTONDOWN) {
+			switch (e.cbutton.button) {
+				case SDL_CONTROLLER_BUTTON_DPAD_UP:
+					downs[KEY_UP] = true;
+					break;
+				case SDL_CONTROLLER_BUTTON_DPAD_DOWN:
+					downs[KEY_DOWN] = true;
+					break;
+				case SDL_CONTROLLER_BUTTON_DPAD_LEFT:
+					downs[KEY_LEFT] = true;
+					break;
+				case SDL_CONTROLLER_BUTTON_DPAD_RIGHT:
+					downs[KEY_RIGHT] = true;
+					break;
+				case SDL_CONTROLLER_BUTTON_BACK:
+					downs[KEY_QUIT] = true;
+					break;
+				case SDL_CONTROLLER_BUTTON_LEFTSHOULDER:
+					downs[KEY_RESET] = true;
+					break;
+				case SDL_CONTROLLER_BUTTON_RIGHTSHOULDER:
+					downs[KEY_SPECIAL] = true;
+					break;
+				case SDL_CONTROLLER_BUTTON_START:
+					downs[KEY_SELECT] = true;
+					break;
+				case SDL_CONTROLLER_BUTTON_A:
+					downs[KEY_FIRE] = true;
+					break;
+				case SDL_CONTROLLER_BUTTON_X:
+					downs[KEY_GRAB] = true;
+					break;
+				case SDL_CONTROLLER_BUTTON_B:
+					downs[KEY_USE] = true;
+					break;
+				case SDL_CONTROLLER_BUTTON_Y:
+					downs[KEY_SPECIAL] = true;
+					break;
+				default:
+					break;
+			}
+		} else if (e.type == SDL_CONTROLLERBUTTONUP) {
+			switch (e.cbutton.button) {
+				case SDL_CONTROLLER_BUTTON_DPAD_UP:
+					presses[KEY_UP] = true;
+					downs[KEY_UP] = false;
+					break;
+				case SDL_CONTROLLER_BUTTON_DPAD_DOWN:
+					presses[KEY_DOWN] = true;
+					downs[KEY_DOWN] = false;
+					break;
+				case SDL_CONTROLLER_BUTTON_DPAD_LEFT:
+					presses[KEY_LEFT] = true;
+					downs[KEY_LEFT] = false;
+					break;
+				case SDL_CONTROLLER_BUTTON_DPAD_RIGHT:
+					presses[KEY_RIGHT] = true;
+					downs[KEY_RIGHT] = false;
+					break;
+				case SDL_CONTROLLER_BUTTON_BACK:
+					presses[KEY_QUIT] = true;
+					downs[KEY_QUIT] = false;
+					break;
+				case SDL_CONTROLLER_BUTTON_LEFTSHOULDER:
+					presses[KEY_RESET] = true;
+					downs[KEY_RESET] = false;
+					break;
+				case SDL_CONTROLLER_BUTTON_RIGHTSHOULDER:
+					presses[KEY_SPECIAL] = true;
+					downs[KEY_SPECIAL] = false;
+					break;
+				case SDL_CONTROLLER_BUTTON_START:
+					presses[KEY_SELECT] = true;
+					downs[KEY_SELECT] = false;
+					break;
+				case SDL_CONTROLLER_BUTTON_A:
+					presses[KEY_FIRE] = true;
+					downs[KEY_FIRE] = false;
+					break;
+				case SDL_CONTROLLER_BUTTON_X:
+					presses[KEY_GRAB] = true;
+					downs[KEY_GRAB] = false;
+					break;
+				case SDL_CONTROLLER_BUTTON_B:
+					presses[KEY_USE] = true;
+					downs[KEY_USE] = false;
+					break;
+				case SDL_CONTROLLER_BUTTON_Y:
+					presses[KEY_SPECIAL] = true;
+					downs[KEY_SPECIAL] = false;
+					break;
+				default:
+					break;
+			}
+		} else if (e.type == SDL_KEYDOWN) {
 			int idx = key_map_index_for_key(e.key.keysym.sym, key_map);
 			if (idx >= 0 && idx < NUM_KEYS) {
 				downs[idx] = true;
