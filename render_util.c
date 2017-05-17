@@ -72,7 +72,9 @@ GLuint create_geom_shader_program(const char *vert_file_name, const char *geom_f
 	GLint viewProjUnif = glGetUniformLocation(shaderProgram, "vp");
 	glUniformMatrix4fv(viewProjUnif, 1, GL_FALSE, vp_mat);
 	GLint texMultUnif = glGetUniformLocation(shaderProgram, "tex_mult");
-	glUniform2f(texMultUnif, 1.0f / (float)tex_w, 1.0f / (float)tex_h);
+	float mx = 1.0f / (float)tex_w;
+	float my = 1.0f / (float)tex_h;
+	glUniform2f(texMultUnif, mx, my);
 	GLuint tex;
 	GLint texUnif = load_texture_to_uniform(tex_file_name, "tex", shaderProgram, &tex, GL_TEXTURE0, 0);
 	*tex_id = tex;
@@ -91,9 +93,9 @@ void free_geom_shader_program(GLuint shader_program) {
 }
 
 void init_render_environment() {
-	glClearColor(0.12f, 0.12f, 0.12f, 1.0f);
-	//glEnable(GL_DEPTH_TEST);
-	//glDepthFunc(GL_LESS);
+	glClearColor(0.72f, 0.72f, 0.72f, 1.0f);
+	glEnable(GL_DEPTH_TEST);
+	glDepthFunc(GL_LESS);
 	//glEnable(GL_CULL_FACE);
 	//glCullFace(GL_FRONT);
 	glDisable(GL_CLIP_PLANE0);

@@ -11,10 +11,10 @@ int level[] = {
 	8, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 8,
 	8, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 8,
 	8, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 8,
+	8, 2, 2, 2, 8, 8, 8, 8, 8, 8, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 8,
 	8, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 8,
 	8, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 8,
-	8, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 8,
-	8, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 8,
+	8, 8, 8, 2, 2, 2, 2, 2, 2, 2, 2, 8, 8, 8, 8, 8, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 8,
 	8, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 8,
 	8, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 8,
 	8, 8, 8, 8, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 8,
@@ -31,21 +31,6 @@ int level[] = {
 int level_w = 32;
 int level_h = 20;
 
-void random_sprite(sprite *s) {
-	s->x = rand_float() * 32.0f;
-	s->y = rand_float() * 23.0f;
-	s->z = 0.0f;
-	s->r = 0.0f;
-	s->g = 0.0f;
-	s->b = 0.0f;
-	s->scale_x = 1.0f;
-	s->scale_y = 1.0f;
-	s->rot = 0.0f;
-	s->spr_row = rand_int(4);
-	s->spr_col = rand_int(4);
-	s->spr_extra = 0.0f;
-}
-
 void aabb_for(float x, float y, aabb *b) {
 	b->x = x;
 	b->y = y;
@@ -53,18 +38,18 @@ void aabb_for(float x, float y, aabb *b) {
 	b->ry = 0.5f;
 }
 
-void sprite_for(float x, float y, int ssw, int idx, sprite *s) {
-	s->x = x + 0.5f;
-	s->y = y + 0.5f;
-	s->z = 0.0f;
+void sprite_for(float x, float y, float z, int row, int col, sprite *s, spritesheet_def *ssd) {
+	s->x = x + 0.5f + ssd->xoff;
+	s->y = y + 0.5f + ssd->yoff;
+	s->z = z;
 	s->r = 0.0f;
 	s->g = 0.0f;
 	s->b = 0.0f;
-	s->scale_x = 0.5f;
-	s->scale_y = 0.5f;
+	s->scale_x = ssd->xscale * 0.5f;
+	s->scale_y = ssd->yscale * 0.5f;
 	s->rot = 0.0f;
-	s->spr_row = idx / ssw;
-	s->spr_col = idx % ssw;
+	s->spr_row = row;
+	s->spr_col = col;
 	s->spr_extra = 0.0f;
 }
 
@@ -210,19 +195,21 @@ void run() {
 	  &ttex
 	);
 	render_buf *trb = create_render_buf(300, tshader, ttex);
-	kobj trif = {5.4f, 1, 0, 0, 0.499f, 0.499f, false, false, false, true, false, false};
+	kobj trif = {5.4f, 1, 0, 0, 0.499f, 0.499f, 0, 0, false, false, false, true, false, false};
+	spritesheet_def trif_def = {6, 10, 1.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f};
 
 	GLuint tex;
 	GLuint shader = create_geom_shader_program(
 		"/Users/dmk/code/pectin/shaders/sprite_vert.glsl",
 		"/Users/dmk/code/pectin/shaders/sprite_geom.glsl",
 		"/Users/dmk/code/pectin/shaders/sprite_frag_simple.glsl",
-		"/Users/dmk/code/pectin/images/sprites_diff.png",
-	  8, 8,
+		"/Users/dmk/code/pectin/images/blocks_diff.png",
+	  16, 22,
 		(GLfloat *)&sd.vp_mat,
 	  &tex
 	);
 	render_buf *rb = create_render_buf(640, shader, tex);
+	spritesheet_def block_def = {22, 16, 1.3125f, 1.5f, 0.0f, 0.0f, 0.0f, 0.0f};
 
 	sprite *s = (sprite *)malloc(sizeof(sprite));
 	tile_range lr = {0, 32, 0, 20};
@@ -231,15 +218,22 @@ void run() {
 	bool cam_moved = false;
 	init_render_environment();
 	printf("l=%d, r=%d, t=%d, b=%d\n", tr.l, tr.r, tr.t, tr.b);
-	for (int x=tr.l; x<tr.r; x++) {
-		for (int y=tr.b; y<tr.t; y++) {
-			int idx = thing_at(x, y);
-			if (idx == 2) idx = rand_int(4);
-			sprite_for((float)x, (float)y, 8, idx, s);
+	for (int y=tr.b; y<tr.t; y++) {
+		for (int x=tr.l; x<tr.r; x++) {
+			int ridx = thing_at(x, y);
+			if (ridx == 2) {
+				//ridx = rand_int(4) + 13;
+				ridx = 0;
+			} else {
+				ridx =  rand_int(4) + 1;
+			}
+			float zp = (float)(((level_h-y)*level_w)+x) * -0.002f;
+			sprite_for((float)x, (float)y, zp, ridx, 0, s, &block_def);
 			render_sprite(rb, s);
 		}
 	}
 	clock_gettime(CLOCK_REALTIME, &t1);
+	int mult = 2;
 	while (loop) {
 		get_input(kdown, kpress, key_map);
 		if (kpress[KEY_QUIT]) {
@@ -249,6 +243,7 @@ void run() {
 			if (sd.cam_pos.y < 5.0f) sd.cam_pos.y = 5.0f;
 			cam_moved = true;
 		}
+		/*
 		if (cam_moved) {
 			update_proj_mat(&sd);
 			update_view_mat(rb, (GLfloat *)&sd.vp_mat);
@@ -260,24 +255,36 @@ void run() {
 			for (int x=tr.l; x<tr.r; x++) {
 				for (int y=tr.b; y<tr.t; y++) {
 					int off = (((level_h-1)-y)*level_w)+x;
-					int idx = level[off];
-					sprite_for((float)x, (float)y, 8, idx, s);
+					int ridx = level[off];
+					sprite_for((float)x, (float)y, (float)cnt*-0.02f, ridx, 0, s, &block_def);
 					render_sprite(rb, s);
 					cnt++;
 				}
 			}
 			cam_moved = false;
 		}
+		*/
 		clock_gettime(CLOCK_REALTIME, &t2);
 		double dt = time_diff_d(t1, t2);
 		update_kobj(&phys, &trif, (float)dt, kdown[KEY_LEFT], kdown[KEY_RIGHT], (kdown[KEY_FIRE] || kdown[KEY_UP]), &handle_horz_collision, &handle_vert_collision);
+		if (kdown[KEY_LEFT]) {
+			trif.row = 4;
+			mult = 2;
+		} else if (kdown[KEY_RIGHT]) {
+			trif.row = 5;
+			mult = 2;
+		} else {
+			trif.row = 2;
+			mult = 3;
+		}
+		trif.col = ((trif.col + 1) % (mult * 10));
 
 		clock_gettime(CLOCK_REALTIME, &t1);
 
 		render_advance(trb);
-		sprite_for(trif.x, trif.y, 10, 0, s);
+		sprite_for(trif.x, trif.y, 0.1f, trif.row, trif.col / mult, s, &trif_def);
 		render_sprite(trb, s);
-		glClear(GL_COLOR_BUFFER_BIT);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		render_sprites(rb);
 		render_sprites(trb);
 		swap_window();

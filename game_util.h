@@ -37,6 +37,8 @@ typedef struct kobj {
 	float vy;
 	float rx;
 	float ry;
+	int row;
+	int col;
 	bool in_air;
 	bool jumping;
 	bool cut_jump;
