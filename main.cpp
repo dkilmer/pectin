@@ -7,29 +7,51 @@
 #include "physics.h"
 
 int level[] = {
-	8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8,
-	8, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 8,
-	8, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 8,
-	8, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 8,
-	8, 2, 2, 2, 8, 8, 8, 8, 8, 8, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 8,
-	8, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 8,
-	8, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 8,
-	8, 8, 8, 2, 2, 2, 2, 2, 2, 2, 2, 8, 8, 8, 8, 8, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 8,
-	8, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 8,
-	8, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 8,
-	8, 8, 8, 8, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 8,
-	8, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 8,
-	8, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 8,
-	8, 2, 2, 2, 2, 8, 8, 8, 8, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 8,
-	8, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 8,
-	8, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 8,
-	8, 2, 8, 2, 2, 2, 2, 2, 2, 8, 8, 8, 8, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 8,
-	8, 2, 8, 2, 2, 2, 2, 2, 2, 2, 2, 2, 8, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 8,
-	8, 2, 8, 2, 2, 2, 2, 2, 2, 2, 2, 2, 8, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 8,
-	8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8
+	1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+	1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+	1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+	1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+	1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+	1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+	1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+	1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+	1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+	1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+	1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+	1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+	1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+	1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+	1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+	1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+	1, 0, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+	1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+	1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+	1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+	13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13,
+	13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13,
+	13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13,
+	13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13,
+	13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13,
+	13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13,
+	13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13,
+	13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13,
+	13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13,
+	13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13,
+	13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13,  0, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13,
+	13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13,  0,  0,  0, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13,
+	13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13,  0, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13,
+	13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13,
+	13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13,
+	13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13,
+	13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13,
+	13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13,
+	13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13,
+	13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13
 };
+
 int level_w = 32;
 int level_h = 20;
+int level_layers = 2;
 
 void aabb_for(float x, float y, aabb *b) {
 	b->x = x;
@@ -38,9 +60,9 @@ void aabb_for(float x, float y, aabb *b) {
 	b->ry = 0.5f;
 }
 
-void sprite_for(float x, float y, float z, int row, int col, sprite *s, spritesheet_def *ssd) {
-	s->x = x + 0.5f + ssd->xoff;
-	s->y = y + 0.5f + ssd->yoff;
+void sprite_for(float x, float y, float z, int layer, int row, int col, sprite *s, spritesheet_def *ssd) {
+	s->x = (x + 0.5f + ssd->xoff) + (ssd->layer_xoff * (float)layer);
+	s->y = (y + 0.5f + ssd->yoff) + (ssd->layer_yoff * (float)layer);
 	s->z = z;
 	s->r = 0.0f;
 	s->g = 0.0f;
@@ -79,20 +101,20 @@ double time_diff_d(timespec start, timespec end)
 	return (double)temp.tv_sec + ((double)temp.tv_nsec / 1000000000.0);
 }
 
-int thing_at(int x, int y) {
-	int off = (((level_h-1)-y)*level_w)+x;
-	if (off < 0 || off >= (level_w * level_h)) return 8;
+int thing_at(int x, int y, int layer) {
+	int off = (layer * level_w * level_h)+(((level_h-1)-y)*level_w)+x;
+	if (off < 0 || off >= (level_w * level_h * level_layers)) return 1;
 	return level[off];
 }
 
-bool block_at(int x, int y) {
-	int off = (((level_h-1)-y)*level_w)+x;
-	if (off < 0 || off >= (level_w * level_h)) return true;
-	return (level[off] == 8);
+bool block_at(int x, int y, int layer) {
+	int off = (layer * level_w * level_h)+(((level_h-1)-y)*level_w)+x;
+	if (off < 0 || off >= (level_w * level_h * level_layers)) return true;
+	return (level[off] != 0);
 }
 
-bool collides_with(aabb *b, int x, int y) {
-	if (!block_at(x, y)) return false;
+bool collides_with(aabb *b, int x, int y, int layer) {
+	if (!block_at(x, y, layer)) return false;
 	aabb sb;
 	aabb_for(x, y, &sb);
 	return collides(b, &sb);
@@ -104,15 +126,15 @@ int handle_horz_collision(kobj *k, float *fixx) {
 	int kx = (int)floorf(k->x+0.5f);
 	int ky = (int)floorf(k->y+0.5f);
 	aabb kb = {k->x, k->y, k->rx, k->ry};
-	bool u = block_at(kx, ky+1);
-	bool d = block_at(kx, ky-1);
+	bool u = block_at(kx, ky+1, 0);
+	bool d = block_at(kx, ky-1, 0);
 
-	bool ul = collides_with(&kb, kx-1, ky+1);
-	bool ur = collides_with(&kb, kx+1, ky+1);
-	bool dl = collides_with(&kb, kx-1, ky-1);
-	bool dr = collides_with(&kb, kx+1, ky-1);
-	bool l = collides_with(&kb, kx-1, ky);
-	bool r = collides_with(&kb, kx+1, ky);
+	bool ul = collides_with(&kb, kx-1, ky+1, 0);
+	bool ur = collides_with(&kb, kx+1, ky+1, 0);
+	bool dl = collides_with(&kb, kx-1, ky-1, 0);
+	bool dr = collides_with(&kb, kx+1, ky-1, 0);
+	bool l = collides_with(&kb, kx-1, ky, 0);
+	bool r = collides_with(&kb, kx+1, ky, 0);
 
 	if (l || (!u && ul) || (!d && dl)) {
 		coll = (COLLIDE_LEFT);
@@ -134,12 +156,12 @@ int handle_vert_collision(kobj *k, float *fixy) {
 	int kx = (int)floorf(k->x+0.5f);
 	int ky = (int)floorf(k->y+0.5f);
 	aabb kb = {k->x, k->y, k->rx, k->ry};
-	bool ul = collides_with(&kb, kx-1, ky+1);
-	bool u = collides_with(&kb, kx, ky+1);
-	bool ur = collides_with(&kb, kx+1, ky+1);
-	bool dl = collides_with(&kb, kx-1, ky-1);
-	bool d = collides_with(&kb, kx, ky-1);
-	bool dr = collides_with(&kb, kx+1, ky-1);
+	bool ul = collides_with(&kb, kx-1, ky+1, 0);
+	bool u = collides_with(&kb, kx, ky+1, 0);
+	bool ur = collides_with(&kb, kx+1, ky+1, 0);
+	bool dl = collides_with(&kb, kx-1, ky-1, 0);
+	bool d = collides_with(&kb, kx, ky-1, 0);
+	bool dr = collides_with(&kb, kx+1, ky-1, 0);
 
 	if (k->vy > 0.0f && (u || ul || ur)) {
 		coll = (coll | COLLIDE_ABOVE);
@@ -194,7 +216,7 @@ void run() {
 		(GLfloat *)&sd.vp_mat,
 	  &ttex
 	);
-	render_buf *trb = create_render_buf(300, tshader, ttex);
+	render_buf *trb = create_render_buf(600, tshader, ttex);
 	kobj trif = {5.4f, 1, 0, 0, 0.499f, 0.499f, 0, 0, false, false, false, true, false, false};
 	spritesheet_def trif_def = {6, 10, 1.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f};
 
@@ -208,8 +230,8 @@ void run() {
 		(GLfloat *)&sd.vp_mat,
 	  &tex
 	);
-	render_buf *rb = create_render_buf(640, shader, tex);
-	spritesheet_def block_def = {22, 16, 1.3125f, 1.5f, 0.0f, 0.0f, 0.0f, 0.0f};
+	render_buf *rb = create_render_buf(1280, shader, tex);
+	spritesheet_def block_def = {22, 16, 1.3125f, 1.5f, 0.0f, 0.0f, -0.1875f, 0.375f};
 
 	sprite *s = (sprite *)malloc(sizeof(sprite));
 	tile_range lr = {0, 32, 0, 20};
@@ -218,18 +240,17 @@ void run() {
 	bool cam_moved = false;
 	init_render_environment();
 	printf("l=%d, r=%d, t=%d, b=%d\n", tr.l, tr.r, tr.t, tr.b);
-	for (int y=tr.b; y<tr.t; y++) {
-		for (int x=tr.l; x<tr.r; x++) {
-			int ridx = thing_at(x, y);
-			if (ridx == 2) {
-				//ridx = rand_int(4) + 13;
-				ridx = 0;
-			} else {
-				ridx =  rand_int(4) + 1;
+	for (int l=0; l<2; l++) {
+		for (int y=tr.b; y<tr.t; y++) {
+			for (int x=tr.l; x<tr.r; x++) {
+				int ridx = thing_at(x, y, l);
+				if (ridx == 13 || ridx == 1) {
+					ridx = ridx + rand_int(4);
+				}
+				float zp = ((float)(((level_h-y)*level_w)+x) * -0.002f) + ((float)l*-1.0f);
+				sprite_for((float)x, (float)y, zp, l, ridx, 0, s, &block_def);
+				render_sprite(rb, s);
 			}
-			float zp = (float)(((level_h-y)*level_w)+x) * -0.002f;
-			sprite_for((float)x, (float)y, zp, ridx, 0, s, &block_def);
-			render_sprite(rb, s);
 		}
 	}
 	clock_gettime(CLOCK_REALTIME, &t1);
@@ -282,7 +303,7 @@ void run() {
 		clock_gettime(CLOCK_REALTIME, &t1);
 
 		render_advance(trb);
-		sprite_for(trif.x, trif.y, 0.1f, trif.row, trif.col / mult, s, &trif_def);
+		sprite_for(trif.x, trif.y, 0.1f, 0, trif.row, trif.col / mult, s, &trif_def);
 		render_sprite(trb, s);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		render_sprites(rb);
