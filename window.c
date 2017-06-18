@@ -244,7 +244,7 @@ void set_wasd_key_map(int *key_map) {
 	key_map[KEY_RESET] = SDLK_SPACE;
 }
 
-void check_sdl_error(int line = -1)
+void check_sdl_error(int line)
 {
 	const char *error = SDL_GetError();
 	if (error != NULL) {

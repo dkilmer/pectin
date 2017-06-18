@@ -37,7 +37,7 @@ add_executable(${PROJECT_NAME} ${PROJECT_SOURCES}
         ${PROJECT_HEADERS}
         ${PROJECT_SHADERS}
         ${PROJECT_CONFIGS}
-        ${DEPS_SOURCES} window.cpp window.h render_util.c render_util.h misc_util.c misc_util.h game_util.c game_util.h physics.c physics.h boids.c boids.h)
+        ${DEPS_SOURCES})
 
 set_target_properties(${PROJECT_NAME} PROPERTIES
         LINKER_FLAGS "/ignore:4099")

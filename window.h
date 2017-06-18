@@ -2,6 +2,7 @@
 #define WINDOW_H
 
 #include <SDL2/SDL.h>
+#include <stdbool.h>
 
 #define KEY_QUIT    0
 #define KEY_LEFT    1
