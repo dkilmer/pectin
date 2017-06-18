@@ -9,7 +9,9 @@ static int rdef_handler(void *uobj, const char* section, const char* name, const
 	//printf("loading section %s, name %s, value %s\n", section, name, value);
 	render_def *rd = (render_def *)uobj;
 	#define MATCH(s, n) strcmp(section, s) == 0 && strcmp(name, n) == 0
-	if (MATCH(rd->section_name, "vert_shader")) {
+	if (MATCH(rd->section_name, "type")) {
+		rd->shader_type = strdup(value);
+	} else if (MATCH(rd->section_name, "vert_shader")) {
 		rd->vert_shader = strdup(value);
 	} else if (MATCH(rd->section_name, "geom_shader")) {
 		rd->geom_shader = strdup(value);
@@ -25,6 +27,8 @@ static int rdef_handler(void *uobj, const char* section, const char* name, const
 		rd->xscale = (float)atof(value);
 	} else if (MATCH(rd->section_name, "y_scale")) {
 		rd->yscale = (float)atof(value);
+	} else if (MATCH(rd->section_name, "line_scale")) {
+		rd->line_scale = (float)atof(value);
 	} else if (MATCH(rd->section_name, "x_offset")) {
 		rd->xoff = (float)atof(value);
 	} else if (MATCH(rd->section_name, "y_offset")) {
@@ -49,16 +53,29 @@ render_def *load_render_def(const char *filename, const char *section, GLfloat *
 		printf("Can't load '%s'\n", filename);
 		return NULL;
 	}
-	rd->shader = create_geom_shader_program(
-		rd->vert_shader,
-		rd->geom_shader,
-		rd->frag_shader,
-		rd->sprite_sheet,
-		rd->cols, rd->rows,
-		vp_matrix,
-		&rd->tex
-	);
-	rd->rbuf = create_render_buf(rd->rbuf_size, rd->shader, rd->tex);
+	if (strcmp(rd->shader_type, "sprite") == 0) {
+		rd->shader = create_sprite_shader_program(
+			rd->vert_shader,
+			rd->geom_shader,
+			rd->frag_shader,
+			rd->sprite_sheet,
+			rd->cols, rd->rows,
+			vp_matrix,
+			&rd->tex
+		);
+		rd->rbuf = create_sprite_render_buf(rd->rbuf_size, rd->shader, rd->tex);
+	} else if (strcmp(rd->shader_type, "line") == 0) {
+		rd-> shader = create_line_shader_program(
+			rd->vert_shader,
+		  rd->geom_shader,
+		  rd->frag_shader,
+		  vp_matrix,
+		  rd->line_scale
+		);
+		rd->rbuf = create_line_render_buf(rd->rbuf_size, rd->shader);
+	} else {
+		printf("ERROR - Invalid shader type %s\n", rd->shader_type);
+	}
 	return rd;
 }
 
@@ -83,7 +100,7 @@ GLint load_texture_to_uniform(const char *filename, const char *unif_name, GLuin
 	return texUnif;
 }
 
-GLuint create_geom_shader_program(const char *vert_file_name, const char *geom_file_name, const char *frag_file_name, const char *tex_file_name, int tex_w, int tex_h, GLfloat *vp_mat, GLuint *tex_id) {
+GLuint create_geom_shader_program(const char *vert_file_name, const char *geom_file_name, const char *frag_file_name) {
 	const GLchar* vertex_shader = load_file(vert_file_name);
 	const GLchar* geom_shader = load_file(geom_file_name);
 	const GLchar* fragment_shader = load_file(frag_file_name);
@@ -125,7 +142,12 @@ GLuint create_geom_shader_program(const char *vert_file_name, const char *geom_f
 	glAttachShader(shaderProgram, fragmentShader);
 	glBindFragDataLocation(shaderProgram, 0, "outColor");
 	glLinkProgram(shaderProgram);
+	return shaderProgram;
+}
 
+GLuint create_sprite_shader_program(const char *vert_file_name, const char *geom_file_name, const char *frag_file_name,
+                                    const char *tex_file_name, int tex_w, int tex_h, GLfloat *vp_mat, GLuint *tex_id) {
+	GLuint shaderProgram = create_geom_shader_program(vert_file_name, geom_file_name, frag_file_name);
 	glUseProgram(shaderProgram);
 	GLint viewProjUnif = glGetUniformLocation(shaderProgram, "vp");
 	glUniformMatrix4fv(viewProjUnif, 1, GL_FALSE, vp_mat);
@@ -136,7 +158,17 @@ GLuint create_geom_shader_program(const char *vert_file_name, const char *geom_f
 	GLuint tex;
 	GLint texUnif = load_texture_to_uniform(tex_file_name, "tex", shaderProgram, &tex, GL_TEXTURE0, 0);
 	*tex_id = tex;
+	return shaderProgram;
+}
 
+GLuint create_line_shader_program(const char *vert_file_name, const char *geom_file_name, const char *frag_file_name,
+                                  GLfloat *vp_mat, GLfloat line_scale) {
+	GLuint shaderProgram = create_geom_shader_program(vert_file_name, geom_file_name, frag_file_name);
+	glUseProgram(shaderProgram);
+	GLint viewProjUnif = glGetUniformLocation(shaderProgram, "vp");
+	glUniformMatrix4fv(viewProjUnif, 1, GL_FALSE, vp_mat);
+	GLint lineScaleUnif = glGetUniformLocation(shaderProgram, "scale");
+	glUniform1f(lineScaleUnif, line_scale);
 	return shaderProgram;
 }
 
@@ -146,7 +178,7 @@ void update_view_mat(render_buf *rb, GLfloat *mat) {
 	glUniformMatrix4fv(viewProjUnif, 1, GL_FALSE, mat);
 }
 
-void free_geom_shader_program(GLuint shader_program) {
+void free_shader_program(GLuint shader_program) {
 	glDeleteProgram(shader_program);
 }
 
@@ -161,13 +193,15 @@ void init_render_environment() {
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 }
 
-render_buf *create_render_buf(int max_items, GLuint shader_program, GLuint tex_id) {
+render_buf *create_sprite_render_buf(int max_items, GLuint shader_program, GLuint tex_id) {
 	render_buf *rb = (render_buf *)malloc(sizeof(render_buf));
+	rb->draw_type = GL_POINTS;
 	rb->num_items = max_items;
-	rb->array_size = rb->num_items * 12 * sizeof(GLfloat);
+	rb->item_size = 12;
+	rb->array_size = rb->num_items * rb->item_size * sizeof(GLfloat);
 	rb->num_bufs = 3;
 	rb->buf_idx = 0;
-	rb->spr_idx = 0;
+	rb->item_idx = 0;
 	rb->shader = shader_program;
 	rb->tex_id = tex_id;
 	rb->fences = (GLsync *)malloc(rb->num_bufs * sizeof(GLsync));
@@ -183,7 +217,7 @@ render_buf *create_render_buf(int max_items, GLuint shader_program, GLuint tex_i
 
 	GLuint posAttrib = (GLuint)glGetAttribLocation(shader_program, "position");
 	glEnableVertexAttribArray(posAttrib);
-	glVertexAttribPointer(posAttrib, 3, GL_FLOAT, GL_FALSE, 12 * sizeof(GLfloat), 0);
+	glVertexAttribPointer(posAttrib, 3, GL_FLOAT, GL_FALSE, rb->item_size * sizeof(GLfloat), 0);
 	err = glGetError();
 	if (err != GL_NO_ERROR) {
 		printf("posAttrib is %d: %d\n", posAttrib, err);
@@ -192,7 +226,7 @@ render_buf *create_render_buf(int max_items, GLuint shader_program, GLuint tex_i
 	// map the color data to an input on the shader
 	GLuint colorAttrib = (GLuint)glGetAttribLocation(shader_program, "color");
 	glEnableVertexAttribArray(colorAttrib);
-	glVertexAttribPointer(colorAttrib, 3, GL_FLOAT, GL_FALSE, 12 * sizeof(GLfloat), (void *)(3 * sizeof(GLfloat)));
+	glVertexAttribPointer(colorAttrib, 3, GL_FLOAT, GL_FALSE, rb->item_size * sizeof(GLfloat), (void *)(3 * sizeof(GLfloat)));
 	err = glGetError();
 	if (err != GL_NO_ERROR) {
 		printf("colorAttrib is %d: %d\n", colorAttrib, err);
@@ -201,7 +235,7 @@ render_buf *create_render_buf(int max_items, GLuint shader_program, GLuint tex_i
 	// map the scale/rotation data to an input on the shader
 	GLuint scaleRotAttrib = (GLuint)glGetAttribLocation(shader_program, "scale_rot");
 	glEnableVertexAttribArray(scaleRotAttrib);
-	glVertexAttribPointer(scaleRotAttrib, 3, GL_FLOAT, GL_FALSE, 12 * sizeof(GLfloat), (void *)(6 * sizeof(GLfloat)));
+	glVertexAttribPointer(scaleRotAttrib, 3, GL_FLOAT, GL_FALSE, rb->item_size * sizeof(GLfloat), (void *)(6 * sizeof(GLfloat)));
 	err = glGetError();
 	if (err != GL_NO_ERROR) {
 		printf("scaleRotAttrib is %d: %d\n", scaleRotAttrib, err);
@@ -210,10 +244,58 @@ render_buf *create_render_buf(int max_items, GLuint shader_program, GLuint tex_i
 	// map the sprite location data to an input on the shader
 	GLuint sprOffsetAttrib = (GLuint)glGetAttribLocation(shader_program, "spr_offset");
 	glEnableVertexAttribArray(sprOffsetAttrib);
-	glVertexAttribPointer(sprOffsetAttrib, 3, GL_FLOAT, GL_FALSE, 12 * sizeof(GLfloat), (void *)(9 * sizeof(GLfloat)));
+	glVertexAttribPointer(sprOffsetAttrib, 3, GL_FLOAT, GL_FALSE, rb->item_size * sizeof(GLfloat), (void *)(9 * sizeof(GLfloat)));
 	err = glGetError();
 	if (err != GL_NO_ERROR) {
 		printf("sprOffsetAttrib is %d: %d\n", sprOffsetAttrib, err);
+	}
+
+	glBufferData(GL_ARRAY_BUFFER, rb->array_size * rb->num_bufs, NULL, GL_STREAM_DRAW);
+	err = glGetError();
+	if (err != GL_NO_ERROR) {
+		printf("buffer data: %d\n", err);
+	}
+
+	return rb;
+}
+
+render_buf *create_line_render_buf(int max_items, GLuint shader_program) {
+	render_buf *rb = (render_buf *)malloc(sizeof(render_buf));
+	rb->draw_type = GL_LINES;
+	rb->num_items = max_items;
+	rb->item_size = 6;
+	rb->array_size = rb->num_items * rb->item_size * sizeof(GLfloat);
+	rb->num_bufs = 3;
+	rb->buf_idx = 0;
+	rb->item_idx = 0;
+	rb->shader = shader_program;
+	rb->tex_id = 0;
+	rb->fences = (GLsync *)malloc(rb->num_bufs * sizeof(GLsync));
+	for (int i=0; i<rb->num_bufs; i++) rb->fences[i] = NULL;
+	//rb->buf = (GLfloat *)malloc((size_t)rb->array_size);
+	glGenVertexArrays(1, &rb->vao);
+	glGenBuffers(1, &rb->vbo);
+
+	GLenum err;
+	glBindVertexArray(rb->vao);
+	// the VBO of points (locations of sprites)
+	glBindBuffer(GL_ARRAY_BUFFER, rb->vbo);
+
+	GLuint posAttrib = (GLuint)glGetAttribLocation(shader_program, "position");
+	glEnableVertexAttribArray(posAttrib);
+	glVertexAttribPointer(posAttrib, 3, GL_FLOAT, GL_FALSE, rb->item_size * sizeof(GLfloat), 0);
+	err = glGetError();
+	if (err != GL_NO_ERROR) {
+		printf("posAttrib is %d: %d\n", posAttrib, err);
+	}
+
+	// map the color data to an input on the shader
+	GLuint colorAttrib = (GLuint)glGetAttribLocation(shader_program, "color");
+	glEnableVertexAttribArray(colorAttrib);
+	glVertexAttribPointer(colorAttrib, 3, GL_FLOAT, GL_FALSE, rb->item_size * sizeof(GLfloat), (void *)(3 * sizeof(GLfloat)));
+	err = glGetError();
+	if (err != GL_NO_ERROR) {
+		printf("colorAttrib is %d: %d\n", colorAttrib, err);
 	}
 
 	glBufferData(GL_ARRAY_BUFFER, rb->array_size * rb->num_bufs, NULL, GL_STREAM_DRAW);
@@ -232,9 +314,9 @@ void free_render_buf(render_buf *rb) {
 	//free(rb->buf);
 }
 
-void render_sprite(render_buf *rb, sprite *s) {
+int init_render(render_buf *rb) {
 	// just starting a buffer. we need to wait and map on that shit
-	if (rb->spr_idx == 0) {
+	if (rb->item_idx == 0) {
 		glBindVertexArray(rb->vao);
 		if (rb->fences[rb->buf_idx] != NULL) {
 			GLenum state = glClientWaitSync(rb->fences[rb->buf_idx], GL_SYNC_FLUSH_COMMANDS_BIT, 1000000000);
@@ -245,16 +327,21 @@ void render_sprite(render_buf *rb, sprite *s) {
 			rb->fences[rb->buf_idx] = NULL;
 		}
 		glBindBuffer(GL_ARRAY_BUFFER, rb->vbo);
-		int map_start = rb->buf_idx * rb->num_items * 12 * sizeof(GLfloat);
-		int buf_len = rb->num_items * 12 * sizeof(GLfloat);
+		int map_start = rb->buf_idx * rb->num_items * rb->item_size * sizeof(GLfloat);
+		int buf_len = rb->num_items * rb->item_size * sizeof(GLfloat);
 		rb->buf = (GLfloat *)glMapBufferRange(GL_ARRAY_BUFFER, map_start, buf_len, GL_MAP_WRITE_BIT|GL_MAP_UNSYNCHRONIZED_BIT);
 		if (rb->buf == NULL) printf("failed to map buffer for buf_idx %d\n", rb->buf_idx);
 	}
-	if (rb->spr_idx == rb->num_items) {
+	if (rb->item_idx == rb->num_items) {
 		printf("can't render to buf_idx %d: overflow\n", rb->buf_idx);
-		return;
+		return -1;
 	}
-	int idx = rb->spr_idx * 12;
+	return 1;
+}
+
+void render_sprite(render_buf *rb, sprite *s) {
+	if (init_render(rb) < 0) return;
+	int idx = rb->item_idx * rb->item_size;
 	rb->buf[idx++] = s->x;
 	rb->buf[idx++] = s->y;
 	rb->buf[idx++] = s->z;
@@ -267,17 +354,37 @@ void render_sprite(render_buf *rb, sprite *s) {
 	rb->buf[idx++] = s->spr_row;
 	rb->buf[idx++] = s->spr_col;
 	rb->buf[idx] = s->spr_extra;
-	rb->spr_idx++;
+	rb->item_idx++;
 }
 
-void render_sprites(render_buf *rb) {
-	//glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, rb->tex_id);
+void render_line(render_buf *rb, line *l) {
+	if (init_render(rb) < 0) return;
+	int idx = rb->item_idx * rb->item_size;
+	rb->buf[idx++] = l->p1.x;
+	rb->buf[idx++] = l->p1.y;
+	rb->buf[idx++] = l->p1.z;
+	rb->buf[idx++] = l->p1.r;
+	rb->buf[idx++] = l->p1.g;
+	rb->buf[idx++] = l->p1.b;
+	rb->buf[idx++] = l->p2.x;
+	rb->buf[idx++] = l->p2.y;
+	rb->buf[idx++] = l->p2.z;
+	rb->buf[idx++] = l->p2.r;
+	rb->buf[idx++] = l->p2.g;
+	rb->buf[idx] = l->p2.b;
+	rb->item_idx+=2;
+}
+
+void render_buffer(render_buf *rb) {
+	if (rb->tex_id > 0) {
+		//glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, rb->tex_id);
+	}
 	glBindVertexArray(rb->vao);
 	glBindBuffer(GL_ARRAY_BUFFER, rb->vbo);
 	glUseProgram(rb->shader);
-	if (rb->spr_idx > 0) {
-		glDrawArrays(GL_POINTS, rb->buf_idx * rb->num_items, rb->spr_idx*4);
+	if (rb->item_idx > 0) {
+		glDrawArrays(rb->draw_type, rb->buf_idx * rb->num_items, rb->item_idx* sizeof(GLfloat));
 	}
 }
 
@@ -289,6 +396,6 @@ void render_advance(render_buf *rb) {
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	glBindVertexArray(0);
 	rb->buf_idx = ((rb->buf_idx + 1) % rb->num_bufs);
-	rb->spr_idx = 0;
+	rb->item_idx = 0;
 };
 

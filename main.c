@@ -407,17 +407,17 @@ void run() {
 		}
 
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		render_sprites(block_def->rbuf);
-		render_sprites(trif_def->rbuf);
-		render_sprites(part_def->rbuf);
+		render_buffer(block_def->rbuf);
+		render_buffer(trif_def->rbuf);
+		render_buffer(part_def->rbuf);
 		swap_window();
 		frame += 1;
 		if (frame == 60) frame = 0;
 	}
 	free(s);
-	free_geom_shader_program(block_def->shader);
-	free_geom_shader_program(trif_def->shader);
-	free_geom_shader_program(part_def->shader);
+	free_shader_program(block_def->shader);
+	free_shader_program(trif_def->shader);
+	free_shader_program(part_def->shader);
 	free_render_buf(block_def->rbuf);
 	free_render_buf(trif_def->rbuf);
 	free_render_buf(part_def->rbuf);
