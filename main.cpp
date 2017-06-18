@@ -35,6 +35,7 @@ int level_w = 32;
 int level_h = 20;
 int level_layers = 5;
 int num_boids = 50;
+int collision_layer = 1;
 
 void aabb_for(float x, float y, aabb *b) {
 	b->x = x;
@@ -43,7 +44,7 @@ void aabb_for(float x, float y, aabb *b) {
 	b->ry = 0.5f;
 }
 
-void sprite_for(float x, float y, int layer, int ridx, int lidx, sprite *s, render_def *rd) {
+void sprite_for(float x, float y, int layer, int ridx, int cidx, sprite *s, render_def *rd) {
 	s->x = (x + 0.5f + rd->xoff) + (rd->layer_xoff * (float)layer);
 	s->y = (y + 0.5f + rd->yoff) + (rd->layer_yoff * (float)layer);
 	s->z = ((((level_h-y)*level_w)+x) * -0.0001f) + ((float)layer*-1.0f);
@@ -53,8 +54,8 @@ void sprite_for(float x, float y, int layer, int ridx, int lidx, sprite *s, rend
 	s->scale_x = rd->xscale * 0.5f;
 	s->scale_y = rd->yscale * 0.5f;
 	s->rot = 0.0f;
-	s->spr_row = ridx;
-	s->spr_col = lidx;
+	s->spr_row = (ridx * rd->cols) + cidx;
+	s->spr_col = 0.0f;
 	s->spr_extra = rd->cols;
 }
 
@@ -193,15 +194,15 @@ int handle_horz_collision(dobj *k, float *fixx) {
 	int kx = (int)floorf(k->x+0.5f);
 	int ky = (int)floorf(k->y+0.5f);
 	aabb kb = {k->x, k->y, k->rx, k->ry};
-	bool u = block_at(kx, ky+1, 1);
-	bool d = block_at(kx, ky-1, 1);
+	bool u = block_at(kx, ky+1, collision_layer);
+	bool d = block_at(kx, ky-1, collision_layer);
 
-	bool ul = collides_with(&kb, kx-1, ky+1, 1);
-	bool ur = collides_with(&kb, kx+1, ky+1, 1);
-	bool dl = collides_with(&kb, kx-1, ky-1, 1);
-	bool dr = collides_with(&kb, kx+1, ky-1, 1);
-	bool l = collides_with(&kb, kx-1, ky, 1);
-	bool r = collides_with(&kb, kx+1, ky, 1);
+	bool ul = collides_with(&kb, kx-1, ky+1, collision_layer);
+	bool ur = collides_with(&kb, kx+1, ky+1, collision_layer);
+	bool dl = collides_with(&kb, kx-1, ky-1, collision_layer);
+	bool dr = collides_with(&kb, kx+1, ky-1, collision_layer);
+	bool l = collides_with(&kb, kx-1, ky, collision_layer);
+	bool r = collides_with(&kb, kx+1, ky, collision_layer);
 
 	if (l || (!u && ul) || (!d && dl)) {
 		coll = (COLLIDE_LEFT);
@@ -223,12 +224,12 @@ int handle_vert_collision(dobj *k, float *fixy) {
 	int kx = (int)floorf(k->x+0.5f);
 	int ky = (int)floorf(k->y+0.5f);
 	aabb kb = {k->x, k->y, k->rx, k->ry};
-	bool ul = collides_with(&kb, kx-1, ky+1, 1);
-	bool u = collides_with(&kb, kx, ky+1, 1);
-	bool ur = collides_with(&kb, kx+1, ky+1, 1);
-	bool dl = collides_with(&kb, kx-1, ky-1, 1);
-	bool d = collides_with(&kb, kx, ky-1, 1);
-	bool dr = collides_with(&kb, kx+1, ky-1, 1);
+	bool ul = collides_with(&kb, kx-1, ky+1, collision_layer);
+	bool u = collides_with(&kb, kx, ky+1, collision_layer);
+	bool ur = collides_with(&kb, kx+1, ky+1, collision_layer);
+	bool dl = collides_with(&kb, kx-1, ky-1, collision_layer);
+	bool d = collides_with(&kb, kx, ky-1, collision_layer);
+	bool dr = collides_with(&kb, kx+1, ky-1, collision_layer);
 
 	if (k->vy > 0.0f && (u || ul || ur)) {
 		coll = (coll | COLLIDE_ABOVE);
@@ -324,11 +325,11 @@ void run() {
 	for (int l=0; l<level_layers; l++) {
 		for (int y=tr.b; y<tr.t; y++) {
 			for (int x=tr.l; x<tr.r; x++) {
-				int ridx = thing_at(x, y, l);
-				if (ridx == 0) continue;
-				ridx -= 1;
-				int lidx = line_idx_for(x, y, l);
-				sprite_for((float)x, (float)y, l, ridx, lidx, s, block_def);
+				int tidx = thing_at(x, y, l);
+				if (tidx == 0) continue;
+				int ridx = (tidx - 1) / block_def->cols;
+				int cidx = (tidx - 1) % block_def->cols;
+				sprite_for((float)x, (float)y, l, ridx, cidx, s, block_def);
 				render_sprite(block_def->rbuf, s);
 			}
 		}
@@ -368,7 +369,8 @@ void run() {
 		*/
 		clock_gettime(CLOCK_REALTIME, &t2);
 		double dt = time_diff_d(t1, t2);
-		update_kobj(&phys, &trif, (float)dt, kdown[KEY_LEFT], kdown[KEY_RIGHT], (kdown[KEY_FIRE] || kdown[KEY_UP]), &handle_horz_collision, &handle_vert_collision);
+		update_dobj(&phys, &trif, (float) dt, kdown[KEY_LEFT], kdown[KEY_RIGHT], (kdown[KEY_FIRE] || kdown[KEY_UP]),
+		            &handle_horz_collision, &handle_vert_collision);
 		if (kdown[KEY_LEFT]) {
 			trif.row = 4;
 			mult = 3;
@@ -384,7 +386,7 @@ void run() {
 		clock_gettime(CLOCK_REALTIME, &t1);
 
 		render_advance(trif_def->rbuf);
-		sprite_for(trif.x, trif.y, 1, (trif.row * 10) + (trif.col / mult), 0, s, trif_def);
+		sprite_for(trif.x, trif.y, 1, trif.row, (trif.col / mult), s, trif_def);
 		render_sprite(trif_def->rbuf, s);
 		if ((frame % 2) == 0) update_boids(bl);
 		bl->ax = s->x;

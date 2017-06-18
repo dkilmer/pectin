@@ -17,7 +17,8 @@ void init_phys(phys_def *phys) {
 	phys->v_term_jump = sqrtf((phys->v_jump * phys->v_jump) + (2 * phys->g * (phys->max_jump_h - phys->min_jump_h)));
 }
 
-void update_kobj(phys_def *phys, dobj *d, float dt, bool ldown, bool rdown, bool jdown, int (*cb_horz)(dobj *, float *fixx), int (*cb_vert)(dobj *, float *fixy)) {
+void update_dobj(phys_def *phys, dobj *d, float dt, bool ldown, bool rdown, bool jdown,
+                 int (*cb_horz)(dobj *, float *fixx), int (*cb_vert)(dobj *, float *fixy)) {
 	float goodx, goody;
 	if (!jdown) d->can_jump = true;
 	if (rdown) {
