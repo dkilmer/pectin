@@ -16,6 +16,7 @@
 extern "C" {
 #endif
 
+// a structure for holding info about AABB collisions
 typedef struct aabb {
 	float x;
 	float y;
@@ -23,6 +24,7 @@ typedef struct aabb {
 	float ry;
 } aabb;
 
+// a structure for holding the physical characteristics of the game world
 typedef struct phys_def {
 	float jump_time; // the time to reach the top of the jump (constant)
 	float max_jump_h; // maximum height of jump (constant)
@@ -37,7 +39,7 @@ typedef struct phys_def {
 
 void init_default_phys(phys_def *phys);
 void init_phys(phys_def *phys);
-void update_kobj(phys_def *phys, kobj *k, float dt, bool ldown, bool rdown, bool jdown, int (*cb_horz)(kobj *, float *fixx), int (*cb_vert)(kobj *, float *fixy));
+void update_kobj(phys_def *phys, dobj *d, float dt, bool ldown, bool rdown, bool jdown, int (*cb_horz)(dobj *, float *fixx), int (*cb_vert)(dobj *, float *fixy));
 bool collides(aabb *a, aabb *b);
 bool collides_x(aabb *a, aabb *b);
 bool collides_y(aabb *a, aabb *b);

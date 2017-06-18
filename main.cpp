@@ -187,7 +187,7 @@ bool collides_with(aabb *b, int x, int y, int layer) {
 	return collides(b, &sb);
 }
 
-int handle_horz_collision(kobj *k, float *fixx) {
+int handle_horz_collision(dobj *k, float *fixx) {
 	int coll = 0;
 	// these are used to determine what blocks to check in the grid
 	int kx = (int)floorf(k->x+0.5f);
@@ -217,7 +217,7 @@ int handle_horz_collision(kobj *k, float *fixx) {
 	return coll;
 }
 
-int handle_vert_collision(kobj *k, float *fixy) {
+int handle_vert_collision(dobj *k, float *fixy) {
 	int coll = 0;
 	// these are used to determine what blocks to check in the grid
 	int kx = (int)floorf(k->x+0.5f);
@@ -311,8 +311,8 @@ void run() {
 		16.0f // max y
 	);
 
-	// create the player, using the kobj structure (for dynamic objects that have physics and collide)
-	kobj trif = {5.4f, 8, 0, 0, 0.499f, 0.499f, 0, 0, false, false, false, true, false, false};
+	// create the player, using the dobj structure (for dynamic objects that have physics and collide)
+	dobj trif = {5.4f, 8, 0, 0, 0.499f, 0.499f, 0, 0, false, false, false, true, false, false};
 
 	sprite *s = (sprite *)malloc(sizeof(sprite));
 	tile_range lr = {0, 32, 0, 20};

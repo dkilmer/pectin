@@ -8,6 +8,7 @@
 extern "C" {
 #endif
 
+// struct to hold a rect of tiles
 typedef struct tile_range {
 	int l;
 	int r;
@@ -15,6 +16,7 @@ typedef struct tile_range {
 	int t;
 } tile_range;
 
+// struct to hold the definition of a screen view
 typedef struct screen_def {
 	int screen_w; // screen pixel width
 	int screen_h; // screen pixel height
@@ -30,7 +32,8 @@ typedef struct screen_def {
 	mat4_t vp_mat;
 } screen_def;
 
-typedef struct kobj {
+// struct to hold a dynamic object that is influenced by physics and collisions
+typedef struct dobj {
 	float x;
 	float y;
 	float vx;
@@ -45,8 +48,9 @@ typedef struct kobj {
 	bool can_jump;
 	bool moving_left;
 	bool moving_right;
-} kobj;
+} dobj;
 
+// struct to hold a "particle" object that is unaffected by physics
 typedef struct pobj {
 	float x;
 	float y;

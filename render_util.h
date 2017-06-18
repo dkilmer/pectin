@@ -7,6 +7,8 @@
 extern "C" {
 #endif
 
+// a structure that represents a buffer of sprites that get rendered to the screen
+// with a particular shader and spritesheet texture
 typedef struct render_buf {
 	int num_items;
 	int array_size;
@@ -21,6 +23,8 @@ typedef struct render_buf {
 	GLsync *fences;
 } render_buf;
 
+// a structure that represents a sprite that is rendered to the screen using
+// geometry shader extrusion, rotation and scaling
 typedef struct sprite {
 	float x;
 	float y;
@@ -36,6 +40,9 @@ typedef struct sprite {
 	float spr_extra;
 } sprite;
 
+// a structure to hold the definition for a group of things that will be rendered
+// with a single render_buf. This is used both to load up the shader and to define
+// the geometry of the sprite sheet.
 typedef struct render_def {
 	const char *section_name;
 	const char *vert_shader;
