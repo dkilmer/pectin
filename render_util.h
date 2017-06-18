@@ -36,17 +36,27 @@ typedef struct sprite {
 	float spr_extra;
 } sprite;
 
-typedef struct spritesheet_def {
-	int rows;
+typedef struct render_def {
+	const char *section_name;
+	const char *vert_shader;
+	const char *geom_shader;
+	const char *frag_shader;
+	const char *sprite_sheet;
 	int cols;
+	int rows;
 	float xscale;
 	float yscale;
 	float xoff;
 	float yoff;
 	float layer_xoff;
 	float layer_yoff;
-} spritesheet_def;
+	int rbuf_size;
+	render_buf *rbuf;
+	GLuint tex;
+	GLuint shader;
+} render_def;
 
+render_def *load_render_def(const char *filename, const char *section, GLfloat *vp_matrix);
 GLint load_texture_to_uniform(const char *filename, const char *unif_name, GLuint shaderProgram, GLuint *tex, GLenum tex_num, GLint tex_idx);
 GLuint create_geom_shader_program(const char *vert_file_name, const char *geom_file_name, const char *frag_file_name, const char *tex_file_name, int tex_w, int tex_h, GLfloat *vp_mat, GLuint *tex_id);
 void free_geom_shader_program(GLuint shader_program);

@@ -47,6 +47,19 @@ typedef struct kobj {
 	bool moving_right;
 } kobj;
 
+typedef struct pobj {
+	float x;
+	float y;
+	float z_norm;
+	float scale_norm_x;
+	float scale_norm_y;
+	float rot_norm;
+	float r;
+	float g;
+	float b;
+} pobj;
+
+
 void init_screen(screen_def *s, int sw, int sh, int ts);
 void update_proj_mat(screen_def *s);
 void print_screen_def(screen_def *s);

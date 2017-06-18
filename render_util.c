@@ -1,8 +1,66 @@
 #include "render_util.h"
 #include "misc_util.h"
+#include "ini.h"
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
+
+static int rdef_handler(void *uobj, const char* section, const char* name, const char* value) {
+	//printf("loading section %s, name %s, value %s\n", section, name, value);
+	render_def *rd = (render_def *)uobj;
+	#define MATCH(s, n) strcmp(section, s) == 0 && strcmp(name, n) == 0
+	if (MATCH(rd->section_name, "vert_shader")) {
+		rd->vert_shader = strdup(value);
+	} else if (MATCH(rd->section_name, "geom_shader")) {
+		rd->geom_shader = strdup(value);
+	} else if (MATCH(rd->section_name, "frag_shader")) {
+		rd->frag_shader = strdup(value);
+	} else if (MATCH(rd->section_name, "sprite_sheet")) {
+		rd->sprite_sheet = strdup(value);
+	} else if (MATCH(rd->section_name, "cols")) {
+		rd->cols = atoi(value);
+	} else if (MATCH(rd->section_name, "rows")) {
+		rd->rows = atoi(value);
+	} else if (MATCH(rd->section_name, "x_scale")) {
+		rd->xscale = (float)atof(value);
+	} else if (MATCH(rd->section_name, "y_scale")) {
+		rd->yscale = (float)atof(value);
+	} else if (MATCH(rd->section_name, "x_offset")) {
+		rd->xoff = (float)atof(value);
+	} else if (MATCH(rd->section_name, "y_offset")) {
+		rd->yoff = (float)atof(value);
+	} else if (MATCH(rd->section_name, "layer_x_offset")) {
+		rd->layer_xoff = (float)atof(value);
+	} else if (MATCH(rd->section_name, "layer_y_offset")) {
+		rd->layer_yoff = (float)atof(value);
+	} else if (MATCH(rd->section_name, "render_buf_size")) {
+		rd->rbuf_size = atoi(value);
+	}
+	return 1;
+}
+
+render_def *load_render_def(const char *filename, const char *section, GLfloat *vp_matrix) {
+	render_def *rd = (render_def *)malloc(sizeof(render_def));
+	rd->section_name = strdup(section);
+	rd->shader = 0;
+	rd->rbuf_size = 0;
+	rd->rbuf = NULL;
+	if (ini_parse(filename, rdef_handler, rd) < 0) {
+		printf("Can't load '%s'\n", filename);
+		return NULL;
+	}
+	rd->shader = create_geom_shader_program(
+		rd->vert_shader,
+		rd->geom_shader,
+		rd->frag_shader,
+		rd->sprite_sheet,
+		rd->cols, rd->rows,
+		vp_matrix,
+		&rd->tex
+	);
+	rd->rbuf = create_render_buf(rd->rbuf_size, rd->shader, rd->tex);
+	return rd;
+}
 
 GLint load_texture_to_uniform(const char *filename, const char *unif_name, GLuint shaderProgram, GLuint *tex, GLenum tex_num, GLint tex_idx) {
 	int tw,th,tn;
