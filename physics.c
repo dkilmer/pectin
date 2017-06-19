@@ -17,6 +17,43 @@ void init_phys(phys_def *phys) {
 	phys->v_term_jump = sqrtf((phys->v_jump * phys->v_jump) + (2 * phys->g * (phys->max_jump_h - phys->min_jump_h)));
 }
 
+void update_np_dobj(phys_def *phys, dobj *d, float dt,
+                    int (*cb_horz)(dobj *, float *fixx), int (*cb_vert)(dobj *, float *fixy)) {
+	float goodx, goody;
+	float old_vx = d->vx;
+	float x_dist = d->vx * dt;
+	d->x += x_dist;
+	if (!d->in_air) {
+		dobj kk = {d->x, d->y-0.02f, d->vx, d->vy-0.1f, d->rx, d->ry, false, false, false, false, false, false};
+		int kk_coll = cb_vert(&kk, &goody);
+		if (!(kk_coll & COLLIDE_BELOW)) {
+			d->in_air = true;
+		}
+	}
+	if (d->in_air) {
+		float old_v = d->vy;
+		d->vy = d->vy +(phys->g * dt);
+		float dist = (float)dt * (old_v + (phys->g * dt / 2.0f));
+		d->y += dist;
+	}
+	int h_collision = cb_horz(d, &goodx);
+	if ((h_collision & COLLIDE_LEFT) || (h_collision & COLLIDE_RIGHT)) {
+		d->vx = 0;
+		d->x = goodx;
+		d->moving_left = false;
+		d->moving_right = false;
+	}
+	int v_collision = cb_vert(d, &goody);
+	if (d->in_air && (v_collision & COLLIDE_BELOW)) {
+		d->vy = 0;
+		d->y = goody;
+		d->in_air = false;
+	} else if (d->in_air && (v_collision & COLLIDE_ABOVE)) {
+		d->vy = 0;
+		d->y = goody;
+	}
+}
+
 void update_dobj(phys_def *phys, dobj *d, float dt, bool ldown, bool rdown, bool jdown,
                  int (*cb_horz)(dobj *, float *fixx), int (*cb_vert)(dobj *, float *fixy)) {
 	float goodx, goody;

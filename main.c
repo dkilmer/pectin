@@ -444,6 +444,35 @@ void run_trifle() {
 	free_render_buf(part_def->rbuf);
 }
 
+int project_trajectory(phys_def *phys, line *proj, float x, float y, float vx, float vy) {
+	dobj o = {x, y, vx, vy, 0.499f, 0.499f, 0, 0, false, false, false, true, false, false};
+	int ppcnt = 0;
+	float lastx = x;
+	float lasty = y;
+	for (int i=0; i<20; i++) {
+		update_np_dobj(phys, &o, (float) 0.05f, &handle_horz_collision, &handle_vert_collision);
+		proj[i].p1.x = lastx;
+		proj[i].p1.y = lasty;
+		proj[i].p1.z = 0.5f;
+		proj[i].p1.r = 1.0f;
+		proj[i].p1.g = 1.0f;
+		proj[i].p1.b = 1.0f;
+
+		proj[i].p2.x = o.x;
+		proj[i].p2.y = o.y;
+		proj[i].p2.z = 0.5f;
+		proj[i].p2.r = 1.0f;
+		proj[i].p2.g = 1.0f;
+		proj[i].p2.b = 1.0f;
+
+		if (!o.in_air) break;
+		lastx = o.x;
+		lasty = o.y;
+		ppcnt++;
+	}
+	return ppcnt;
+}
+
 void run_throw() {
 	level_layers = 1;
 	collision_layer = 0;
@@ -483,16 +512,12 @@ void run_throw() {
 
 	const char *config_filename = "/Users/dmk/code/pectin/config/throw_render_defs.cfg";
 	// set up rendering for the player character
-	printf("ball...\n");
 	render_def *ball_def = load_render_def(config_filename, "ball", (GLfloat *)&sd.vp_mat);
 	// set up rendering for blocks
-	printf("blocks...\n");
 	render_def *block_def = load_render_def(config_filename, "blocks", (GLfloat *)&sd.vp_mat);
 	// set up rendering for lines
-	printf("lines...\n");
 	render_def *line_def = load_render_def(config_filename, "lines", (GLfloat *)&sd.vp_mat);
 	// set up rendering for font
-	printf("font...\n");
 	render_def *font_def = load_render_def(config_filename, "font", (GLfloat *)&sd.vp_mat);
 
 	// create the player, using the dobj structure (for dynamic objects that have physics and collide)
@@ -501,10 +526,13 @@ void run_throw() {
 	line ln = {{16, 8, 0, 1.0f, 1.0f, 0.0f}, {8, 12, 0, 0.0f, 1.0f, 1.0f}};
 
 	//const char *txt = "This is an [example] of some {text}. Who knows if it has mojo?";
-	const char *txt = "This is some text. Does *it* look good?";
+	const char *txt = "60.0 FPS + 30/2 = 12 23,468.0\"what\"";
 	float txt_x = 1.0f;
-	float txt_y = 15.0f;
+	float txt_y = 18.0f;
 	int txt_len = (int)strlen(txt);
+
+	printf("sizeof(line) is %d\n", (int)sizeof(line));
+	line *project = (line *)malloc(20 * sizeof(line));
 
 	sprite *s = (sprite *)malloc(sizeof(sprite));
 	tile_range lr = {0, 32, 0, 20};
@@ -541,6 +569,7 @@ void run_throw() {
 	clock_gettime(CLOCK_REALTIME, &t1);
 	int mult = 2;
 	int frame = 0;
+	int proj_cnt = 0;
 	while (loop) {
 		get_input(kdown, kpress, key_map, &mouse);
 		if (kpress[KEY_QUIT]) {
@@ -566,11 +595,21 @@ void run_throw() {
 			//printf("mouse: (%f, %f)\n", wmx, wmy);
 			ln.p1.x = wmx;
 			ln.p1.y = wmy;
+
+			float pvx = (ln.p2.x - ln.p1.x) * 5.0f;
+			float pvy = (ln.p2.y - ln.p1.y) * 5.0f;
+			proj_cnt = project_trajectory(&phys, project, ln.p2.x, ln.p2.y, pvx, pvy);
 		} else {
+			proj_cnt = 0;
 			ln.p1.x = ball.x + 0.5f;
 			ln.p1.y = ball.y + 0.5f;
+			ln.p2.x = ball.x + 0.5f;
+			ln.p2.y = ball.y + 0.5f;
 		}
 		render_line(line_def->rbuf, &ln);
+		for (int i=0; i<proj_cnt; i++) {
+			render_line(line_def->rbuf, &project[i]);
+		}
 		render_buffer(line_def->rbuf);
 
 		render_buffer(block_def->rbuf);

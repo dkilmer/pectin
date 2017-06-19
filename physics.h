@@ -41,6 +41,8 @@ void init_default_phys(phys_def *phys);
 void init_phys(phys_def *phys);
 void update_dobj(phys_def *phys, dobj *d, float dt, bool ldown, bool rdown, bool jdown,
                  int (*cb_horz)(dobj *, float *fixx), int (*cb_vert)(dobj *, float *fixy));
+void update_np_dobj(phys_def *phys, dobj *d, float dt,
+                    int (*cb_horz)(dobj *, float *fixx), int (*cb_vert)(dobj *, float *fixy));
 bool collides(aabb *a, aabb *b);
 bool collides_x(aabb *a, aabb *b);
 bool collides_y(aabb *a, aabb *b);

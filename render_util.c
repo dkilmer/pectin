@@ -384,7 +384,7 @@ void render_buffer(render_buf *rb) {
 	glBindBuffer(GL_ARRAY_BUFFER, rb->vbo);
 	glUseProgram(rb->shader);
 	if (rb->item_idx > 0) {
-		glDrawArrays(rb->draw_type, rb->buf_idx * rb->num_items, rb->item_idx* sizeof(GLfloat));
+		glDrawArrays(rb->draw_type, rb->buf_idx * rb->num_items, rb->item_idx);
 	}
 }
 
