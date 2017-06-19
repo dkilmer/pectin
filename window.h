@@ -26,10 +26,18 @@ extern SDL_Window *main_window;
 extern SDL_GLContext main_context;
 extern SDL_GameController *controller;
 
+typedef struct {
+	int x;
+	int y;
+	bool ldown;
+	bool rdown;
+	bool odown;
+} mouse_input;
+
 bool init_window(const char *program_name, int w, int h);
 void cleanup_window();
 void swap_window();
-void get_input(bool *downs, bool *presses, const int *key_map);
+void get_input(bool *downs, bool *presses, const int *key_map, mouse_input *mouse);
 void set_default_key_map(int *key_map);
 void set_wasd_key_map(int *key_map);
 void print_sdl_gl_attributes();

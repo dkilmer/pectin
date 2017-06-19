@@ -1,5 +1,5 @@
-#ifndef SCREEN_UTIL_H
-#define SCREEN_UTIL_H
+#ifndef GAME_UTIL_H
+#define GAME_UTIL_H
 
 #include <stdbool.h>
 #include "math_3d.h"
@@ -66,6 +66,7 @@ typedef struct pobj {
 
 void init_screen(screen_def *s, int sw, int sh, int ts);
 void update_proj_mat(screen_def *s);
+void mouse_to_world(screen_def *s, int mx, int my, float *wx, float *wy);
 void print_screen_def(screen_def *s);
 void get_tile_range(screen_def *s, tile_range *tr, tile_range *level_range);
 
@@ -74,4 +75,4 @@ void get_tile_range(screen_def *s, tile_range *tr, tile_range *level_range);
 }
 #endif
 
-#endif //SCREEN_UTIL_H
+#endif //GAME_UTIL_H

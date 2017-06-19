@@ -94,7 +94,7 @@ int key_map_index_for_key(int keycode, const int *key_map) {
 	return -1;
 }
 
-void get_input(bool *downs, bool *presses, const int *key_map) {
+void get_input(bool *downs, bool *presses, const int *key_map, mouse_input *mouse) {
 	SDL_Event e;
 	for (int i=0; i<NUM_KEYS; i++) {
 		presses[i] = false;
@@ -210,6 +210,40 @@ void get_input(bool *downs, bool *presses, const int *key_map) {
 				presses[idx] = true;
 				downs[idx] = false;
 			}
+		} else if (e.type == SDL_MOUSEBUTTONDOWN) {
+			//printf("mouse down: (%d, %d)\n", e.button.x, e.button.y);
+			mouse->x = e.button.x;
+			mouse->y = e.button.y;
+			switch (e.button.button)
+			{
+				case SDL_BUTTON_LEFT:
+					mouse->ldown = true;
+					break;
+				case SDL_BUTTON_RIGHT:
+					mouse->rdown = true;
+					break;
+				default:
+					mouse->odown = true;
+					break;
+			}
+		} else if (e.type == SDL_MOUSEBUTTONUP) {
+			//printf("mouse up: (%d, %d)\n", e.button.x, e.button.y);
+			switch (e.button.button)
+			{
+				case SDL_BUTTON_LEFT:
+					mouse->ldown = false;
+					break;
+				case SDL_BUTTON_RIGHT:
+					mouse->rdown = false;
+					break;
+				default:
+					mouse->odown = false;
+					break;
+			}
+		} else if (e.type == SDL_MOUSEMOTION) {
+			//printf("mouse motion: (%d, %d)\n", e.motion.x, e.motion.y);
+			mouse->x = e.motion.x;
+			mouse->y = e.motion.y;
 		}
 	}
 }

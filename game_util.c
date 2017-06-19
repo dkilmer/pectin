@@ -1,5 +1,6 @@
-#define MATH_3D_IMPLEMENTATION
 #include "game_util.h"
+#define MATH_3D_IMPLEMENTATION
+#include "math_3d.h"
 
 void init_screen(screen_def *s, int sw, int sh, int ts) {
 	s->screen_w = sw;
@@ -26,6 +27,11 @@ void update_proj_mat(screen_def *s) {
 	mat4_t v_mat = m4_look_at(s->cam_pos, cat, up);
 	mat4_t m_mat = m4_identity();
 	s->vp_mat = m4_mul(m4_mul(p_mat, v_mat), m_mat);
+}
+
+void mouse_to_world(screen_def *s, int mx, int my, float *wx, float *wy) {
+	*wx = ((float)mx / (float)s->tile_w) + (s->cam_pos.x - s->half_w);
+	*wy = ((float)(s->screen_h-my) / (float)s->tile_h) + (s->cam_pos.y - s->half_h);
 }
 
 void print_screen_def(screen_def *s) {
