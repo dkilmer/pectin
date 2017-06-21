@@ -10,6 +10,8 @@ else()
     endif()
 endif()
 
+set(CHIPMUNK_LIBRARIES chipmunk)
+
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${PROJECT_SOURCE_DIR}/cmake")
 set(CMAKE_MACOSX_RPATH 1)
 
@@ -45,5 +47,5 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 find_package(SDL2 REQUIRED)
 find_package(SDL2_mixer REQUIRED)
 
-target_link_libraries(${PROJECT_NAME} ${GLAD_LIBRARIES} ${SDL2_LIBRARY}
+target_link_libraries(${PROJECT_NAME} ${GLAD_LIBRARIES} ${CHIPMUNK_LIBRARIES} ${SDL2_LIBRARY}
         ${SDLMIXER_LIBRARY})

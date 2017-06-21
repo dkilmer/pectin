@@ -9,6 +9,7 @@
 #include "easing.h"
 #include "colors.h"
 #include "boids.h"
+#include <chipmunk/chipmunk.h>
 
 #define SCREEN_W 1024
 #define SCREEN_H 640
@@ -25,11 +26,17 @@ typedef struct timespec timespec;
 int *level;
 
 int font_space[] = {
-	6,2,6,6,7,7,2,4,4,6,6,4,6,2,6,6,4,6,6,6,6,6,6,6,6,6,2,3,6,6,6,6,7,6,6,6,6,6,6,6,6,6,6,6,6,8,7,6,6,6,6,6,6,6,8,8,6,6,6,4,6,4,6,7,5,6,6,6,6,6,6,6,6,2,5,6,2,8,6,6,6,6,6,6,6,6,6,8,6,6,6,4,2,4,6,8
+	6,2,4,6,6,7,7,2,4,4,6,6,3,6,2,6,6,4,6,6,6,6,6,6,
+	6,6,2,3,6,6,6,6,7,6,6,6,6,6,6,6,6,6,6,6,6,8,7,6,
+	6,6,6,6,6,6,8,8,6,6,6,4,6,4,6,7,5,6,6,6,6,6,6,6,
+	6,2,5,6,2,8,6,6,6,6,6,6,6,6,6,8,6,6,6,4,2,4,6,8
 };
 
 int font_back[] = {
-	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,-3,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+	0,0,-3,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 };
 
 int font_kern = 1;
@@ -43,9 +50,39 @@ int level_trifle[] = {
 };
 
 int level_throw[] = {
-	1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+	1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+	1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
+	1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
+	1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
+	1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
+	1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
+	1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
+	1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
+	1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
+	1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
+	1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
+	1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
+	1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
+	1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
+	1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
+	1,1,1,1,1,1,1,1,1,1,1,0,0,0,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,1,
+	1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
+	1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
+	1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
+	1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1
 };
 
+int static_cnt = 8;
+srect statics[] = {
+	{1.0,13.0,6.0,14.0},
+	{1.0,9.0,7.0,10.0},
+	{1.0,4.0,11.0,5.0},
+	{14.0,4.0,20.0,5.0},
+	{0.0,0.0,1.0,20.0},
+	{31.0,0.0,32.0,20.0},
+	{1.0,19.0,31.0,20.0},
+	{1.0,0.0,31.0,1.0}
+};
 
 //int moss[] = {
 //	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,449,337,337,401,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,449,369,401,0,353,401,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,449,305,449,369,401,449,369,273,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,449,434,0,353,465,433,353,401,449,401,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,321,497,369,337,401,0,417,0,481,369,497,273,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,353,401,449,305,449,369,401,353,465,305,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,353,369,449,305,385,481,337,305,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,353,465,497,305,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,417,417,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,481,433,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,417,417,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,481,433,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,417,417,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
@@ -473,7 +510,78 @@ int project_trajectory(phys_def *phys, line *proj, float x, float y, float vx, f
 	return ppcnt;
 }
 
+static cpBody *add_kbar(cpSpace *space, cpVect a, cpVect b, int group)
+{
+	cpVect center = cpvmult(cpvadd(a, b), 1.0f/2.0f);
+	cpFloat length = cpvlength(cpvsub(b, a));
+
+	cpBody *body = cpSpaceAddBody(space, cpBodyNewStatic());
+	cpBodySetPosition(body, center);
+
+	//cpShape *shape = cpSpaceAddShape(space, cpSegmentShapeNew(body, a, b, 0.1f));
+	cpVect av = cpvsub(a, center);
+	cpVect bv = cpvsub(b, center);
+	cpShape *shape = cpSpaceAddShape(space, cpSegmentShapeNew(body, av, bv, 0.2f));
+	cpShapeSetFilter(shape, cpShapeFilterNew(group, CP_ALL_CATEGORIES, CP_ALL_CATEGORIES));
+
+	return body;
+}
+
+static cpBody *add_bar(cpSpace *space, cpVect a, cpVect b, int group)
+{
+	cpVect center = cpvmult(cpvadd(a, b), 1.0f/2.0f);
+	cpFloat length = cpvlength(cpvsub(b, a));
+	cpFloat mass = length;
+
+	cpBody *body = cpSpaceAddBody(space, cpBodyNew(mass, mass*length*length/1.2f));
+	cpBodySetPosition(body, center);
+
+	cpVect av = cpvsub(a, center);
+	cpVect bv = cpvsub(b, center);
+	cpShape *shape = cpSpaceAddShape(space, cpSegmentShapeNew(body, av, bv, 0.2f));
+	cpShapeSetFilter(shape, cpShapeFilterNew(group, CP_ALL_CATEGORIES, CP_ALL_CATEGORIES));
+
+	return body;
+}
+
+void line_for(cpVect pos, cpFloat ang, cpFloat r, line *l) {
+	// position as if about the origin
+	cpFloat x = (r * sin(ang));
+	cpFloat y = (r * cos(ang));
+	l->p1.x = (float)(x + pos.x);
+	l->p1.y = (float)(y + pos.y);
+	l->p2.x = (float)((x * -1.0) + pos.x);
+	l->p2.y = (float)((y * -1.0) + pos.y);
+}
+
+
 void run_throw() {
+	cpSpace *space = cpSpaceNew();
+	cpSpaceSetIterations(space, 10);
+	cpSpaceSetGravity(space, cpv(0, -30));
+	cpSpaceSetSleepTimeThreshold(space, 0.5f);
+
+	cpBody *staticBody = cpSpaceGetStaticBody(space);
+
+	for (int i=0; i<static_cnt; i++) {
+		cpVect verts[] = {
+			{statics[i].x1,statics[i].y1},
+			{statics[i].x1,statics[i].y2},
+			{statics[i].x2,statics[i].y2},
+			{statics[i].x2,statics[i].y1}
+		};
+		cpSpaceAddShape(space, cpPolyShapeNewRaw(staticBody, 4, verts, 0.0f));
+	}
+
+	cpBody *kbody = add_kbar(space, cpv(28, 1), cpv(28, 2), 0);
+	cpBody *body1  = add_bar(space, cpv(28, 2), cpv(28, 3), 0);
+	//cpBody *body2  = add_bar(space, cpv(28, 3), cpv(28, 4), 0);
+	cpSpaceAddConstraint(space, cpPivotJointNew( kbody,  body1, cpv(28, 2)));
+	//cpSpaceAddConstraint(space, cpPinJointNew( body1,  body2, cpv(0, 0.5), cpv(0, -0.5)));
+	//cpSpaceAddConstraint(space, cpDampedRotarySpringNew(kbody, body1, 0, 1000.0f, 20.0f));
+	//cpSpaceAddConstraint(space, cpDampedRotarySpringNew(body1, body2, 0, 1000.0f, 20.0f));
+
+
 	level_layers = 1;
 	collision_layer = 0;
 	level = level_throw;
@@ -523,10 +631,16 @@ void run_throw() {
 	// create the player, using the dobj structure (for dynamic objects that have physics and collide)
 	dobj ball = {16, 8, 0, 0, 0.499f, 0.499f, 2, 0, false, false, false, true, false, false};
 
+	cpFloat mass = 1.0f;
+	cpFloat r = 0.5f;
+	cpBody *body = cpSpaceAddBody(space, cpBodyNew(mass, cpMomentForCircle(mass, 0.0f, r, cpvzero)));
+	cpBodySetPosition(body, cpv(16.5f, 8.5f));
+	cpSpaceAddShape(space, cpCircleShapeNew(body, r, cpvzero));
+
 	line ln = {{16, 8, 0, 1.0f, 1.0f, 0.0f}, {8, 12, 0, 0.0f, 1.0f, 1.0f}};
 
 	//const char *txt = "This is an [example] of some {text}. Who knows if it has mojo?";
-	const char *txt = "60.0 FPS + 30/2 = 12 23,468.0\"what\"";
+	const char *txt = "This is some text that will be on the screen";
 	float txt_x = 1.0f;
 	float txt_y = 18.0f;
 	int txt_len = (int)strlen(txt);
@@ -575,21 +689,43 @@ void run_throw() {
 		if (kpress[KEY_QUIT]) {
 			loop = false;
 		}
+		cpVect cur_vel = cpBodyGetVelocity(body);
+		if (kdown[KEY_LEFT]) {
+			cpBodySetVelocity(body, cpv(-5.0, cur_vel.y));
+		} else if (kdown[KEY_RIGHT]) {
+			cpBodySetVelocity(body, cpv(5.0, cur_vel.y));
+		} else if (kdown[KEY_FIRE]) {
+			cpBodySetVelocity(body, cpv(cur_vel.x, 10.0));
+		}
 		clock_gettime(CLOCK_REALTIME, &t2);
 		double dt = time_diff_d(t1, t2);
-		update_dobj(&phys, &ball, (float) dt, kdown[KEY_LEFT], kdown[KEY_RIGHT], (kdown[KEY_FIRE] || kdown[KEY_UP]),
-		            &handle_horz_collision, &handle_vert_collision);
+		cpSpaceStep(space, dt);
+		//update_dobj(&phys, &ball, (float) dt, kdown[KEY_LEFT], kdown[KEY_RIGHT], (kdown[KEY_FIRE] || kdown[KEY_UP]),
+		//            &handle_horz_collision, &handle_vert_collision);
 		clock_gettime(CLOCK_REALTIME, &t1);
 
 		render_advance(ball_def->rbuf);
+		cpVect ball_pos = cpBodyGetPosition(body);
+		ball.x = (float)(ball_pos.x - 0.5);
+		ball.y = (float)(ball_pos.y - 0.5);
 		sprite_for(ball.x, ball.y, 1, ball.row, (ball.col / mult), s, ball_def);
 		render_sprite(ball_def->rbuf, s);
 
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+		render_advance(line_def->rbuf);
+		cpFloat lang = cpBodyGetAngle(body1);
+		cpVect lpos = cpBodyGetPosition(body1);
+		line_for(lpos, lang, 0.5, &ln);
+		render_line(line_def->rbuf, &ln);
+		lang = cpBodyGetAngle(kbody);
+		lpos = cpBodyGetPosition(kbody);
+		line_for(lpos, lang, 0.5, &ln);
+		render_line(line_def->rbuf, &ln);
+
+		/*
 		ln.p2.x = ball.x + 0.5f;
 		ln.p2.y = ball.y + 0.5f;
-		render_advance(line_def->rbuf);
 		if (mouse.ldown) {
 			mouse_to_world(&sd, mouse.x, mouse.y, &wmx, &wmy);
 			//printf("mouse: (%f, %f)\n", wmx, wmy);
@@ -610,6 +746,7 @@ void run_throw() {
 		for (int i=0; i<proj_cnt; i++) {
 			render_line(line_def->rbuf, &project[i]);
 		}
+		*/
 		render_buffer(line_def->rbuf);
 
 		render_buffer(block_def->rbuf);

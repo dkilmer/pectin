@@ -16,6 +16,10 @@ typedef struct tile_range {
 	int t;
 } tile_range;
 
+typedef struct {
+	float x1, y1, x2, y2;
+} srect;
+
 // struct to hold the definition of a screen view
 typedef struct screen_def {
 	int screen_w; // screen pixel width
