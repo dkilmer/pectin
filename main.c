@@ -65,19 +65,19 @@ int level_throw[] = {
 	1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
 	1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
 	1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
-	1,1,1,1,1,1,1,1,1,1,1,0,0,0,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,1,
+	1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
 	1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
 	1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
 	1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
 	1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1
 };
 
-int static_cnt = 8;
+int static_cnt = 7;
 srect statics[] = {
 	{1.0,13.0,6.0,14.0},
 	{1.0,9.0,7.0,10.0},
 	{1.0,4.0,11.0,5.0},
-	{14.0,4.0,20.0,5.0},
+	//{14.0,4.0,20.0,5.0},
 	{0.0,0.0,1.0,20.0},
 	{31.0,0.0,32.0,20.0},
 	{1.0,19.0,31.0,20.0},
@@ -515,13 +515,14 @@ static cpBody *add_kbar(cpSpace *space, cpVect a, cpVect b, int group)
 	cpVect center = cpvmult(cpvadd(a, b), 1.0f/2.0f);
 	cpFloat length = cpvlength(cpvsub(b, a));
 
-	cpBody *body = cpSpaceAddBody(space, cpBodyNewStatic());
+	cpBody *body = cpSpaceAddBody(space, cpBodyNewKinematic());
 	cpBodySetPosition(body, center);
+	cpBodySetAngle(body, 0);
 
 	//cpShape *shape = cpSpaceAddShape(space, cpSegmentShapeNew(body, a, b, 0.1f));
 	cpVect av = cpvsub(a, center);
 	cpVect bv = cpvsub(b, center);
-	cpShape *shape = cpSpaceAddShape(space, cpSegmentShapeNew(body, av, bv, 0.2f));
+	cpShape *shape = cpSpaceAddShape(space, cpSegmentShapeNew(body, av, bv, 0.0f));
 	cpShapeSetFilter(shape, cpShapeFilterNew(group, CP_ALL_CATEGORIES, CP_ALL_CATEGORIES));
 
 	return body;
@@ -535,10 +536,11 @@ static cpBody *add_bar(cpSpace *space, cpVect a, cpVect b, int group)
 
 	cpBody *body = cpSpaceAddBody(space, cpBodyNew(mass, mass*length*length/1.2f));
 	cpBodySetPosition(body, center);
+	cpBodySetAngle(body, 0);
 
 	cpVect av = cpvsub(a, center);
 	cpVect bv = cpvsub(b, center);
-	cpShape *shape = cpSpaceAddShape(space, cpSegmentShapeNew(body, av, bv, 0.2f));
+	cpShape *shape = cpSpaceAddShape(space, cpSegmentShapeNew(body, av, bv, 0.0f));
 	cpShapeSetFilter(shape, cpShapeFilterNew(group, CP_ALL_CATEGORIES, CP_ALL_CATEGORIES));
 
 	return body;
@@ -573,13 +575,29 @@ void run_throw() {
 		cpSpaceAddShape(space, cpPolyShapeNewRaw(staticBody, 4, verts, 0.0f));
 	}
 
-	cpBody *kbody = add_kbar(space, cpv(28, 1), cpv(28, 2), 0);
-	cpBody *body1  = add_bar(space, cpv(28, 2), cpv(28, 3), 0);
-	//cpBody *body2  = add_bar(space, cpv(28, 3), cpv(28, 4), 0);
-	cpSpaceAddConstraint(space, cpPivotJointNew( kbody,  body1, cpv(28, 2)));
-	//cpSpaceAddConstraint(space, cpPinJointNew( body1,  body2, cpv(0, 0.5), cpv(0, -0.5)));
-	//cpSpaceAddConstraint(space, cpDampedRotarySpringNew(kbody, body1, 0, 1000.0f, 20.0f));
-	//cpSpaceAddConstraint(space, cpDampedRotarySpringNew(body1, body2, 0, 1000.0f, 20.0f));
+	int num_bodies = 6;
+	cpBody *last_body = staticBody;
+	cpVect start_pos = cpv(20, 1);
+	cpBody **plant = (cpBody **)malloc(sizeof(cpBody *) * num_bodies);
+	for (int i=0; i<num_bodies; i++) {
+		cpFloat cur_y = start_pos.y + ((cpFloat)i);
+		plant[i] = add_bar(space, cpv(start_pos.x, cur_y), cpv(start_pos.x, cur_y+1), 1);
+		cpSpaceAddConstraint(space, cpPivotJointNew(plant[i],  last_body, cpv(start_pos.x, cur_y)));
+		cpSpaceAddConstraint(space, cpDampedRotarySpringNew(plant[i], last_body, 0, 2000.0f, 10.0f));
+		last_body = plant[i];
+	}
+
+	/*
+	cpBody *kbody = add_bar(space, cpv(28, 1), cpv(28, 2), 1);
+	cpBody *body1  = add_bar(space, cpv(28, 2), cpv(28, 3), 1);
+	cpBody *body2  = add_bar(space, cpv(28, 3), cpv(28, 4), 1);
+	cpSpaceAddConstraint(space, cpPivotJointNew( kbody,  staticBody, cpv(28, 1)));
+	cpSpaceAddConstraint(space, cpPivotJointNew( body1,  kbody, cpv(28, 2)));
+	cpSpaceAddConstraint(space, cpPivotJointNew( body2,  body1, cpv(28, 3)));
+	cpSpaceAddConstraint(space, cpDampedRotarySpringNew(kbody, staticBody, 0, 1000.0f, 20.0f));
+	cpSpaceAddConstraint(space, cpDampedRotarySpringNew(body1, kbody , 0, 1000.0f, 20.0f));
+	cpSpaceAddConstraint(space, cpDampedRotarySpringNew(body2, body1 , 0, 1000.0f, 20.0f));
+	*/
 
 
 	level_layers = 1;
@@ -637,7 +655,7 @@ void run_throw() {
 	cpBodySetPosition(body, cpv(16.5f, 8.5f));
 	cpSpaceAddShape(space, cpCircleShapeNew(body, r, cpvzero));
 
-	line ln = {{16, 8, 0, 1.0f, 1.0f, 0.0f}, {8, 12, 0, 0.0f, 1.0f, 1.0f}};
+	line ln = {{16, 8, 0, 0.0f, 0.5f, 0.0f}, {8, 12, 0, 0.0f, 0.5f, 0.0f}};
 
 	//const char *txt = "This is an [example] of some {text}. Who knows if it has mojo?";
 	const char *txt = "This is some text that will be on the screen";
@@ -714,14 +732,42 @@ void run_throw() {
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		render_advance(line_def->rbuf);
-		cpFloat lang = cpBodyGetAngle(body1);
-		cpVect lpos = cpBodyGetPosition(body1);
-		line_for(lpos, lang, 0.5, &ln);
+		ln.p2.x = (float)start_pos.x;
+		ln.p2.y = (float)start_pos.y;
+		for (int i=0; i<num_bodies; i++) {
+			cpVect lpos = cpBodyGetPosition(plant[i]);
+			ln.p1.x = ln.p2.x;
+			ln.p1.y = ln.p2.y;
+			ln.p2.x = (float)lpos.x;
+			ln.p2.y = (float)lpos.y;
+			render_line(line_def->rbuf, &ln);
+		}
+		/*
+		//cpFloat lang = cpBodyGetAngle(kbody);
+		cpVect lpos = cpBodyGetPosition(kbody);
+		ln.p1.x = startx;
+		ln.p1.y = starty;
+		ln.p2.x = (float)lpos.x;
+		ln.p2.y = (float)lpos.y;
+		//line_for(lpos, lang, 0.5, &ln);
 		render_line(line_def->rbuf, &ln);
-		lang = cpBodyGetAngle(kbody);
-		lpos = cpBodyGetPosition(kbody);
-		line_for(lpos, lang, 0.5, &ln);
+		//lang = cpBodyGetAngle(body1);
+		lpos = cpBodyGetPosition(body1);
+		ln.p1.x = ln.p2.x;
+		ln.p1.y = ln.p2.y;
+		ln.p2.x = (float)lpos.x;
+		ln.p2.y = (float)lpos.y;
+		//line_for(lpos, lang, 0.5, &ln);
 		render_line(line_def->rbuf, &ln);
+		//lang = cpBodyGetAngle(body2);
+		lpos = cpBodyGetPosition(body2);
+		ln.p1.x = ln.p2.x;
+		ln.p1.y = ln.p2.y;
+		ln.p2.x = (float)lpos.x;
+		ln.p2.y = (float)lpos.y;
+		//line_for(lpos, lang, 0.5, &ln);
+		render_line(line_def->rbuf, &ln);
+		*/
 
 		/*
 		ln.p2.x = ball.x + 0.5f;
