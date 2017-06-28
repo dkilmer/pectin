@@ -2,7 +2,7 @@
 #define MATH_3D_IMPLEMENTATION
 #include "math_3d.h"
 
-void init_screen(screen_def *s, int sw, int sh, int ts) {
+void init_screen(screen_def *s, int sw, int sh, int ts, bool ortho) {
 	s->screen_w = sw;
 	s->screen_h = sh;
 	s->tile_w = ts;
@@ -14,16 +14,22 @@ void init_screen(screen_def *s, int sw, int sh, int ts) {
 	s->half_h = s->v_units / 2.0f;
 	s->near = 0.1f;
 	s->far = 100.0f;
+	s->fov = 30.0f;
 	s->cam_pos.x = s->half_w;
 	s->cam_pos.y = s->half_h;
-	s->cam_pos.z = 10.0f;
-	update_proj_mat(s);
+	float rads = (s->fov / 2.0f) * (float)ONE_DEG_IN_RAD;
+	float tang = tanf(rads);
+	s->cam_pos.z = (ortho) ? 10.0f : (s->half_h / tang);
+	printf("half_w is %f z is %f rads is %f tang is %f\n", s->half_w, s->cam_pos.z, rads, tang);
+	update_proj_mat(s, ortho);
 }
 
-void update_proj_mat(screen_def *s) {
+void update_proj_mat(screen_def *s, bool ortho) {
+	float aspect = (float)s->screen_w / (float)s->screen_h; // aspect ratio
 	vec3_t cat = {s->cam_pos.x, s->cam_pos.y, 0.0f};
 	vec3_t up = {0.0f, 1.0f, 0.0f};
-	mat4_t p_mat = m4_ortho(-s->half_w, s->half_w, -s->half_h, s->half_h, s->far, s->near);
+	mat4_t p_mat = (ortho) ? m4_ortho(-s->half_w, s->half_w, -s->half_h, s->half_h, s->far, s->near)
+			: m4_perspective(s->fov, aspect, s->near, s->far);
 	mat4_t v_mat = m4_look_at(s->cam_pos, cat, up);
 	mat4_t m_mat = m4_identity();
 	s->vp_mat = m4_mul(m4_mul(p_mat, v_mat), m_mat);

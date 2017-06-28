@@ -4,9 +4,13 @@
 #include <stdbool.h>
 #include "math_3d.h"
 
+#define ONE_DEG_IN_RAD  (2.0f * M_PI) / 360.0f // 0.017444444
+
 #if defined __cplusplus
 extern "C" {
 #endif
+
+typedef struct { float x, y, z, w; } vec4_t;
 
 // struct to hold a rect of tiles
 typedef struct tile_range {
@@ -16,9 +20,20 @@ typedef struct tile_range {
 	int t;
 } tile_range;
 
+// simple rectangle
 typedef struct {
 	float x1, y1, x2, y2;
 } srect;
+
+// light
+typedef struct {
+	vec4_t position;
+	vec3_t intensities;
+	float attenuation;
+	float ambient_coefficient;
+	float cone_angle;
+	vec3_t cone_direction;
+} light;
 
 // struct to hold the definition of a screen view
 typedef struct screen_def {
@@ -32,6 +47,7 @@ typedef struct screen_def {
 	float half_h;
 	float near;
 	float far;
+	float fov;
 	vec3_t cam_pos;
 	mat4_t vp_mat;
 } screen_def;
@@ -68,8 +84,8 @@ typedef struct pobj {
 } pobj;
 
 
-void init_screen(screen_def *s, int sw, int sh, int ts);
-void update_proj_mat(screen_def *s);
+void init_screen(screen_def *s, int sw, int sh, int ts, bool ortho);
+void update_proj_mat(screen_def *s, bool ortho);
 void mouse_to_world(screen_def *s, int mx, int my, float *wx, float *wy);
 void print_screen_def(screen_def *s);
 void get_tile_range(screen_def *s, tile_range *tr, tile_range *level_range);

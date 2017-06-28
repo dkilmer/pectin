@@ -2,7 +2,6 @@
 
 in vec3 FColor;
 in vec2 TexCoord;
-in vec2 LineTexCoord;
 in vec4 WorldPos;
 
 out vec4 outColor;

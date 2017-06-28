@@ -59,8 +59,8 @@ int level_throw[] = {
 	1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
 	1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
 	1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
-	1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
-	1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
+	1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
+	1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
 	1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
 	1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
 	1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
@@ -333,7 +333,7 @@ void run_trifle() {
 
 	// initialize the screen view
 	screen_def sd;
-	init_screen(&sd, SCREEN_W, SCREEN_H, 32);
+	init_screen(&sd, SCREEN_W, SCREEN_H, 32, true);
 	//glViewport(-32, -32, 512, 320);
 	print_screen_def(&sd);
 
@@ -587,19 +587,6 @@ void run_throw() {
 		last_body = plant[i];
 	}
 
-	/*
-	cpBody *kbody = add_bar(space, cpv(28, 1), cpv(28, 2), 1);
-	cpBody *body1  = add_bar(space, cpv(28, 2), cpv(28, 3), 1);
-	cpBody *body2  = add_bar(space, cpv(28, 3), cpv(28, 4), 1);
-	cpSpaceAddConstraint(space, cpPivotJointNew( kbody,  staticBody, cpv(28, 1)));
-	cpSpaceAddConstraint(space, cpPivotJointNew( body1,  kbody, cpv(28, 2)));
-	cpSpaceAddConstraint(space, cpPivotJointNew( body2,  body1, cpv(28, 3)));
-	cpSpaceAddConstraint(space, cpDampedRotarySpringNew(kbody, staticBody, 0, 1000.0f, 20.0f));
-	cpSpaceAddConstraint(space, cpDampedRotarySpringNew(body1, kbody , 0, 1000.0f, 20.0f));
-	cpSpaceAddConstraint(space, cpDampedRotarySpringNew(body2, body1 , 0, 1000.0f, 20.0f));
-	*/
-
-
 	level_layers = 1;
 	collision_layer = 0;
 	level = level_throw;
@@ -632,7 +619,7 @@ void run_throw() {
 
 	// initialize the screen view
 	screen_def sd;
-	init_screen(&sd, SCREEN_W, SCREEN_H, 32);
+	init_screen(&sd, SCREEN_W, SCREEN_H, 32, true);
 	//glViewport(-32, -32, 512, 320);
 	print_screen_def(&sd);
 
@@ -742,57 +729,6 @@ void run_throw() {
 			ln.p2.y = (float)lpos.y;
 			render_line(line_def->rbuf, &ln);
 		}
-		/*
-		//cpFloat lang = cpBodyGetAngle(kbody);
-		cpVect lpos = cpBodyGetPosition(kbody);
-		ln.p1.x = startx;
-		ln.p1.y = starty;
-		ln.p2.x = (float)lpos.x;
-		ln.p2.y = (float)lpos.y;
-		//line_for(lpos, lang, 0.5, &ln);
-		render_line(line_def->rbuf, &ln);
-		//lang = cpBodyGetAngle(body1);
-		lpos = cpBodyGetPosition(body1);
-		ln.p1.x = ln.p2.x;
-		ln.p1.y = ln.p2.y;
-		ln.p2.x = (float)lpos.x;
-		ln.p2.y = (float)lpos.y;
-		//line_for(lpos, lang, 0.5, &ln);
-		render_line(line_def->rbuf, &ln);
-		//lang = cpBodyGetAngle(body2);
-		lpos = cpBodyGetPosition(body2);
-		ln.p1.x = ln.p2.x;
-		ln.p1.y = ln.p2.y;
-		ln.p2.x = (float)lpos.x;
-		ln.p2.y = (float)lpos.y;
-		//line_for(lpos, lang, 0.5, &ln);
-		render_line(line_def->rbuf, &ln);
-		*/
-
-		/*
-		ln.p2.x = ball.x + 0.5f;
-		ln.p2.y = ball.y + 0.5f;
-		if (mouse.ldown) {
-			mouse_to_world(&sd, mouse.x, mouse.y, &wmx, &wmy);
-			//printf("mouse: (%f, %f)\n", wmx, wmy);
-			ln.p1.x = wmx;
-			ln.p1.y = wmy;
-
-			float pvx = (ln.p2.x - ln.p1.x) * 5.0f;
-			float pvy = (ln.p2.y - ln.p1.y) * 5.0f;
-			proj_cnt = project_trajectory(&phys, project, ln.p2.x, ln.p2.y, pvx, pvy);
-		} else {
-			proj_cnt = 0;
-			ln.p1.x = ball.x + 0.5f;
-			ln.p1.y = ball.y + 0.5f;
-			ln.p2.x = ball.x + 0.5f;
-			ln.p2.y = ball.y + 0.5f;
-		}
-		render_line(line_def->rbuf, &ln);
-		for (int i=0; i<proj_cnt; i++) {
-			render_line(line_def->rbuf, &project[i]);
-		}
-		*/
 		render_buffer(line_def->rbuf);
 
 		render_buffer(block_def->rbuf);
