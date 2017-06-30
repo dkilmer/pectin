@@ -9,6 +9,8 @@
 #include "easing.h"
 #include "colors.h"
 #include "boids.h"
+#include "math_3d.h"
+#include "qubicle.h"
 #include <chipmunk/chipmunk.h>
 
 #define SCREEN_W 1024
@@ -108,6 +110,21 @@ void sprite_for(float x, float y, int layer, int ridx, int cidx, sprite *s, rend
 	s->r = 0.556863f;
 	s->g = 0.443137f;
 	s->b = 0.329412f;
+	s->scale_x = rd->xscale * 0.5f;
+	s->scale_y = rd->yscale * 0.5f;
+	s->rot = 0.0f;
+	s->spr_row = (ridx * rd->cols) + cidx;
+	s->spr_col = 0.0f;
+	s->spr_extra = rd->cols;
+}
+
+void sprite_for_box(float x, float y, float z, float zscale, int ridx, int cidx, sprite *s, render_def *rd) {
+	s->x = (x + 0.5f + rd->xoff);
+	s->y = (y + 0.5f + rd->yoff);
+	s->z = z;
+	s->r = zscale;
+	s->g = 0.0;
+	s->b = 0.0;
 	s->scale_x = rd->xscale * 0.5f;
 	s->scale_y = rd->yscale * 0.5f;
 	s->rot = 0.0f;
@@ -747,13 +764,186 @@ void run_throw() {
 	free_render_buf(line_def->rbuf);
 }
 
+void add_light(GLuint shader, int idx, light *l) {
+	char uname[1024];
+
+	sprintf(uname, "all_lights[%d].position", idx);
+	glUniform4f(glGetUniformLocation(shader, uname), l->position.x, l->position.y, l->position.z, l->position.w);
+
+	sprintf(uname, "all_lights[%d].intensities", idx);
+	glUniform3f(glGetUniformLocation(shader, uname), l->intensities.x, l->intensities.y, l->intensities.z);
+
+	sprintf(uname, "all_lights[%d].attenuation", idx);
+	glUniform1f(glGetUniformLocation(shader, uname), l->attenuation);
+
+	sprintf(uname, "all_lights[%d].ambient_coefficient", idx);
+	glUniform1f(glGetUniformLocation(shader, uname), l->ambient_coefficient);
+
+	sprintf(uname, "all_lights[%d].cone_angle", idx);
+	glUniform1f(glGetUniformLocation(shader, uname), l->cone_angle);
+
+	sprintf(uname, "all_lights[%d].cone_direction", idx);
+	glUniform3f(glGetUniformLocation(shader, uname), l->cone_direction.x, l->cone_direction.y, l->cone_direction.z);
+}
+
+void run_box() {
+	level_layers = 1;
+	collision_layer = 0;
+	level = level_throw;
+	// variables for timing used in physics
+	timespec t1, t2;
+	bool loop = true;
+
+	// keyboard event variables
+	bool kdown[NUM_KEYS];
+	bool kpress[NUM_KEYS];
+	for (int i=0; i<NUM_KEYS; i++) {
+		kdown[i] = false;
+		kpress[i] = false;
+	}
+	int key_map[NUM_KEYS];
+	set_default_key_map(key_map);
+	mouse_input mouse;
+	float wmx = 0.0f;
+	float wmy = 0.0f;
+
+	// initialize the screen view
+	screen_def sd;
+	init_screen(&sd, SCREEN_W, SCREEN_H, 16, false);
+	//glViewport(-32, -32, 512, 320);
+	print_screen_def(&sd);
+
+	const char *config_filename = "/Users/dmk/code/pectin/config/box_render_defs.cfg";
+	// set up rendering for blocks
+	render_def *block_def = load_render_def(config_filename, "blocks", (GLfloat *)&sd.vp_mat);
+	// set up rendering for font
+	render_def *font_def = load_render_def(config_filename, "font", (GLfloat *)&sd.vp_mat);
+
+	const char *txt = "This is some text that will be on the screen";
+	float txt_x = 1.0f;
+	float txt_y = 18.0f;
+	int txt_len = (int)strlen(txt);
+
+	// set up all the uniforms for lighting
+	glUseProgram(block_def->shader);
+	GLint num_lights_unif = glGetUniformLocation(block_def->shader, "num_lights");
+	printf("num_lights_unif: %d\n", num_lights_unif);
+	glUniform1i(num_lights_unif, 3);
+	GLint camera_pos_unif = glGetUniformLocation(block_def->shader, "camera_pos");
+	printf("camera_pos_unif: %d\n", camera_pos_unif);
+	glUniform3fv(camera_pos_unif, 1, (GLfloat *)&sd.cam_pos);
+	GLint shininess_unif = glGetUniformLocation(block_def->shader, "shininess");
+	printf("shininess_unif: %d\n", shininess_unif);
+	glUniform1f(shininess_unif, 4.0f);
+	GLint spec_color_unif = glGetUniformLocation(block_def->shader, "spec_color");
+	printf("spec_color_unif: %d\n", spec_color_unif);
+	glUniform3f(spec_color_unif, 1.0f, 1.0f, 1.0f);
+
+	light point_light0 = {
+		{60.0f, 30.0f, 10.0f, 1.0f}, // position
+		{5.0f, 5.0f, 5.0f},       // intensities
+		0.1f,                     // attenuation
+		0.00f,                    // ambient_coefficient
+		180.0f,                        // cone angle
+		{0.0f, 0.0f, 0.0f}        // cone direction
+	};
+	add_light(block_def->shader, 0, &point_light0);
+
+	light point_light1 = {
+		{4.0f, 10.0f, 10.0f, 1.0f}, // position
+		{4.0f, 4.0f, 4.0f},       // intensities
+		0.1f,                     // attenuation
+		0.00f,                    // ambient_coefficient
+		180.0f,                        // cone angle
+		{0.0f, 0.0f, 0.0f}        // cone direction
+	};
+	add_light(block_def->shader, 1, &point_light1);
+
+	light dir_light = {
+		{0.0f, 0.8f, 0.6f, 0.0f}, // position
+		{0.2f, 0.3f, 0.4f},       // intensities
+	  0.0f,                     // attenuation
+	  0.001f,                    // ambient_coefficient
+	  180.0f,                        // cone angle
+		{0.0f, 0.0f, 0.0f}        // cone direction
+	};
+	add_light(block_def->shader, 2, &dir_light);
+
+	GLint lp0_unif = glGetUniformLocation(block_def->shader, "all_lights[0].position");
+	GLint lp1_unif = glGetUniformLocation(block_def->shader, "all_lights[1].position");
+
+	sprite *s = (sprite *)malloc(sizeof(sprite));
+	tile_range lr = {0, 64, 0, 40};
+	tile_range tr;
+	get_tile_range(&sd, &tr, &lr);
+	bool cam_moved = false;
+	init_render_environment();
+	for (int y=tr.b; y<tr.t; y++) {
+		for (int x=tr.l; x<tr.r; x++) {
+			if (rand_int(5) == 0) continue;
+			sprite_for_box((float)x, (float)y, rand_float() * -3.0f, 6.0f, 0, 0, s, block_def);
+			render_sprite(block_def->rbuf, s);
+		}
+	}
+
+	/*
+	int advance = 0;
+	float tx = txt_x;
+	for (int i=0; i<txt_len; i++) {
+		int ch = txt[i] - 32;
+		int trow = ch / 24;
+		int tcol = ch % 24;
+		int back = font_back[ch];
+		float kern = (((float)font_kern / 8.0f) * font_def->xscale);
+		tx += (((float)advance / 8.0f) * font_def->xscale);
+		tx += kern;
+		if (back < 0) tx += (((float)back / 8.0f) * font_def->xscale);
+		sprite_for(tx, txt_y, 0, trow, tcol, s, font_def);
+		render_sprite(font_def->rbuf, s);
+		advance = font_space[ch];
+	}
+	*/
+	clock_gettime(CLOCK_REALTIME, &t1);
+	int frame = 0;
+	while (loop) {
+		get_input(kdown, kpress, key_map, &mouse);
+		if (kpress[KEY_QUIT]) {
+			loop = false;
+		}
+		if (kdown[KEY_LEFT]) {
+			point_light0.position.x -= 0.2f;
+			point_light1.position.x += 0.2f;
+		} else if (kdown[KEY_RIGHT]) {
+			point_light0.position.x += 0.2f;
+			point_light1.position.x -= 0.2f;
+		}
+		glUniform4f(lp0_unif, point_light0.position.x, point_light0.position.y, point_light0.position.z, point_light0.position.w);
+		glUniform4f(lp1_unif, point_light1.position.x, point_light1.position.y, point_light1.position.z, point_light1.position.w);
+
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+		render_buffer(block_def->rbuf);
+		//render_buffer(font_def->rbuf);
+		swap_window();
+		frame += 1;
+		if (frame == 60) frame = 0;
+	}
+}
+
+
 int main(int argc, char *argv[]) {
 	if (!init_window("test sdl_ogl", SCREEN_W, SCREEN_H)) {
 		return -1;
 	}
 	print_sdl_gl_attributes();
 
-	run_throw();
+	//run_box();
+	int size;
+	qbox *boxes = load_qubicle_file("/Users/dmk/Desktop/voxel_test/untitled.qb", &size);
+	printf("found %d objects\n", size);
+	for (int i=0; i<size; i++) {
+		printf("(%d,%d,%d) - %d\n", boxes[i].x, boxes[i].y, boxes[i].z, boxes[i].zsize);
+	}
 
 	cleanup_window();
 

@@ -12,7 +12,7 @@ void init_screen(screen_def *s, int sw, int sh, int ts, bool ortho) {
 	s->v_units = (float)sh / (float)ts;
 	s->half_w = s->h_units / 2.0f;
 	s->half_h = s->v_units / 2.0f;
-	s->near = 0.1f;
+	s->near = 0.5f;
 	s->far = 100.0f;
 	s->fov = 30.0f;
 	s->cam_pos.x = s->half_w;

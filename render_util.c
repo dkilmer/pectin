@@ -89,8 +89,8 @@ GLint load_texture_to_uniform(const char *filename, const char *unif_name, GLuin
 	glBindTexture(GL_TEXTURE_2D, *tex);
 	printf("TEXTURE ID is %d, tex_num is %d, tex_idx is %d\n", *tex, tex_num, tex_idx);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tw, th, 0, GL_RGBA, GL_UNSIGNED_BYTE, image_data);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	//glGenerateMipmap(GL_TEXTURE_2D);
@@ -142,6 +142,19 @@ GLuint create_geom_shader_program(const char *vert_file_name, const char *geom_f
 	glAttachShader(shaderProgram, fragmentShader);
 	glBindFragDataLocation(shaderProgram, 0, "outColor");
 	glLinkProgram(shaderProgram);
+
+	GLint isLinked = 0;
+	glGetProgramiv(shaderProgram, GL_LINK_STATUS, &isLinked);
+	if(isLinked == GL_FALSE) {
+		printf("ERROR: shader program failed to link\n");
+		GLint maxLength = 0;
+		glGetProgramiv(shaderProgram, GL_INFO_LOG_LENGTH, &maxLength);
+		char buffer[maxLength];
+		glGetProgramInfoLog(shaderProgram, maxLength, &maxLength, buffer);
+		printf("%s\n", buffer);
+	}
+
+
 	return shaderProgram;
 }
 
@@ -183,12 +196,13 @@ void free_shader_program(GLuint shader_program) {
 }
 
 void init_render_environment() {
-	glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_LESS);
-	//glEnable(GL_CULL_FACE);
-	//glCullFace(GL_FRONT);
-	glDisable(GL_CLIP_PLANE0);
+	//glFrontFace(GL_CW);
+	glEnable(GL_CULL_FACE);
+	glCullFace(GL_FRONT);
+	//glDisable(GL_CLIP_PLANE0);
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 }

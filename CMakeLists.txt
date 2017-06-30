@@ -39,7 +39,7 @@ add_executable(${PROJECT_NAME} ${PROJECT_SOURCES}
         ${PROJECT_HEADERS}
         ${PROJECT_SHADERS}
         ${PROJECT_CONFIGS}
-        ${DEPS_SOURCES})
+        ${DEPS_SOURCES} qubicle.c qubicle.h)
 
 set_target_properties(${PROJECT_NAME} PROPERTIES
         LINKER_FLAGS "/ignore:4099")
