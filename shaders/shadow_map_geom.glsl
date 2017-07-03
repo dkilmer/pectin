@@ -1,7 +1,5 @@
 #version 330 core
 
-#define MAX_LIGHTS 10
-
 layout(points) in;
 layout(triangle_strip, max_vertices = 20) out;
 
@@ -11,80 +9,14 @@ in vec3 SprOffset[];
 
 smooth out vec3 FColor;
 out vec2 TexCoord;
-out vec4 ShadowCoord;
-out vec3 Intensity;
-out vec3 WorldPos;
-out vec3 Normal;
 
-uniform mat4 vp;
-uniform mat4 depth_bias_vp;
+uniform mat4 depth_vp;
 uniform vec2 tex_mult;
-uniform int num_lights;
-uniform struct Light {
-	vec4 position;
-	vec3 intensities; //a.k.a the color of the light
-	float attenuation;
-	float ambient_coefficient;
-	float cone_angle;
-	vec3 cone_direction;
-} all_lights[MAX_LIGHTS];
-uniform vec3 camera_pos;
-uniform float shininess;
-uniform vec3 spec_color;
-
-vec3 ApplyLight(Light light, vec3 normal, vec3 surfacePos, vec3 surfaceToCamera) {
-	vec3 surfaceToLight;
-	float attenuation = 1.0;
-	if(light.position.w == 0.0) {
-		//directional light
-		surfaceToLight = normalize(light.position.xyz);
-		attenuation = 1.0; //no attenuation for directional lights
-	} else {
-		//point light
-		surfaceToLight = normalize(light.position.xyz - surfacePos);
-		float distanceToLight = length(light.position.xyz - surfacePos);
-		attenuation = 1.0 / (1.0 + light.attenuation * pow(distanceToLight, 2));
-
-		//cone restrictions (affects attenuation)
-		float lightToSurfaceAngle = degrees(acos(dot(-surfaceToLight, normalize(light.cone_direction))));
-		if(lightToSurfaceAngle > light.cone_angle){
-			attenuation = 0.0;
-		}
-	}
-
-	//ambient
-	//vec3 ambient = light.ambient_coefficient * surfaceColor * light.intensities;
-	vec3 ambient = light.ambient_coefficient * light.intensities;
-
-	//diffuse
-	float diffuseCoefficient = max(0.0, dot(normal, surfaceToLight));
-	//vec3 diffuse = diffuseCoefficient * surfaceColor * light.intensities;
-	vec3 diffuse = diffuseCoefficient * light.intensities;
-
-	//specular
-	float specularCoefficient = 0.0;
-	if(diffuseCoefficient > 0.0)
-		specularCoefficient = pow(max(0.0, dot(surfaceToCamera, reflect(-surfaceToLight, normal))), shininess);
-	vec3 specular = specularCoefficient * spec_color * light.intensities;
-
-	//linear color (color before gamma correction)
-	return ambient + attenuation*(diffuse + specular);
-}
-
 
 void emit_point(mat3 rotation, vec3 pt, vec3 offset, vec2 tc, vec3 norm) {
 	vec4 pos = vec4((rotation * offset) + pt, 1.0);
-	vec3 surfaceToCamera = normalize(camera_pos - pos.xyz);
-	vec3 linearColor = vec3(0);
-	for(int i = 0; i < num_lights; ++i){
-		linearColor += ApplyLight(all_lights[i], norm, pos.xyz, surfaceToCamera);
-	}
-  gl_Position = vp * pos;
+  gl_Position = depth_vp * pos;
 	TexCoord = tc;
-	ShadowCoord = depth_bias_vp * pos;
-  Intensity = linearColor;
-  WorldPos = pos.xyz;
-  Normal = norm;
   EmitVertex();
 }
 

@@ -17,6 +17,12 @@ static int rdef_handler(void *uobj, const char* section, const char* name, const
 		rd->geom_shader = strdup(value);
 	} else if (MATCH(rd->section_name, "frag_shader")) {
 		rd->frag_shader = strdup(value);
+	} else if (MATCH(rd->section_name, "depth_vert_shader")) {
+		rd->depth_vert_shader = strdup(value);
+	} else if (MATCH(rd->section_name, "depth_geom_shader")) {
+		rd->depth_geom_shader = strdup(value);
+	} else if (MATCH(rd->section_name, "depth_frag_shader")) {
+		rd->depth_frag_shader = strdup(value);
 	} else if (MATCH(rd->section_name, "sprite_sheet")) {
 		rd->sprite_sheet = strdup(value);
 	} else if (MATCH(rd->section_name, "cols")) {
@@ -39,68 +45,147 @@ static int rdef_handler(void *uobj, const char* section, const char* name, const
 		rd->layer_yoff = (float)atof(value);
 	} else if (MATCH(rd->section_name, "render_buf_size")) {
 		rd->rbuf_size = atoi(value);
+	} else if (MATCH(rd->section_name, "viewport_w")) {
+		rd->viewport_w = atoi(value);
+	} else if (MATCH(rd->section_name, "viewport_h")) {
+		rd->viewport_h = atoi(value);
+	} else if (MATCH(rd->section_name, "depth_viewport_w")) {
+		rd->depth_viewport_w = atoi(value);
+	} else if (MATCH(rd->section_name, "depth_viewport_h")) {
+		rd->depth_viewport_h = atoi(value);
 	}
 	return 1;
 }
 
-render_def *load_render_def(const char *filename, const char *section, GLfloat *vp_matrix) {
+render_def *load_render_def(const char *filename, const char *section, GLfloat *vp_matrix,
+                            GLfloat *depth_vp_matrix, GLfloat *depth_bias_matrix) {
 	render_def *rd = (render_def *)malloc(sizeof(render_def));
 	rd->section_name = strdup(section);
 	rd->shader = 0;
 	rd->rbuf_size = 0;
-	rd->rbuf = NULL;
+	rd->use_depth = false;
 	if (ini_parse(filename, rdef_handler, rd) < 0) {
 		printf("Can't load '%s'\n", filename);
 		return NULL;
 	}
+
+	// allocate memory for and copy over transformation matrices
+	rd->vp_mat = (GLfloat *)malloc(sizeof(GLfloat) * 16);
+	memcpy(rd->vp_mat, vp_matrix, 16*sizeof(GLfloat));
+	printf("vp_mat:");
+	for (int i=0; i<16; i++) {
+		printf(" %f", rd->vp_mat[i]);
+	}
+	printf("\n");
+	if (depth_vp_matrix != NULL) {
+		rd->depth_vp_mat = (GLfloat *)malloc(sizeof(GLfloat) * 16);
+		memcpy(rd->depth_vp_mat, depth_vp_matrix, 16*sizeof(GLfloat));
+		printf("depth_vp_mat:");
+		for (int i=0; i<16; i++) {
+			printf(" %f", rd->depth_vp_mat[i]);
+		}
+		printf("\n");
+	} else {
+		rd->depth_vp_mat = NULL;
+	}
+	if (depth_bias_matrix != NULL) {
+		rd->depth_bias_mat = (GLfloat *)malloc(sizeof(GLfloat) * 16);
+		memcpy(rd->depth_bias_mat, depth_bias_matrix, 16*sizeof(GLfloat));
+		printf("depth_bias_mat:");
+		for (int i=0; i<16; i++) {
+			printf(" %f", rd->depth_bias_mat[i]);
+		}
+		printf("\n");
+	} else {
+		rd->depth_bias_mat = NULL;
+	}
+
+	// create the shaders and buffers depending on the type
 	if (strcmp(rd->shader_type, "sprite") == 0) {
-		rd->shader = create_sprite_shader_program(
-			rd->vert_shader,
-			rd->geom_shader,
-			rd->frag_shader,
-			rd->sprite_sheet,
-			rd->cols, rd->rows,
-			vp_matrix,
-			&rd->tex
-		);
-		rd->rbuf = create_sprite_render_buf(rd->rbuf_size, rd->shader, rd->tex);
+		create_sprite_shader_program(rd);
 	} else if (strcmp(rd->shader_type, "line") == 0) {
-		rd-> shader = create_line_shader_program(
-			rd->vert_shader,
-		  rd->geom_shader,
-		  rd->frag_shader,
-		  vp_matrix,
-		  rd->line_scale
-		);
-		rd->rbuf = create_line_render_buf(rd->rbuf_size, rd->shader);
+		create_line_shader_program(rd);
+	} else if (strcmp(rd->shader_type, "depth") == 0) {
+		create_depth_shader_program(rd);
 	} else {
 		printf("ERROR - Invalid shader type %s\n", rd->shader_type);
 	}
 	return rd;
 }
 
+GLuint create_depth_map(int w, int h) {
+	GLuint depth_map;
+	glGenTextures(1, &depth_map);
+	glBindTexture(GL_TEXTURE_2D, depth_map);
+	/*
+	glTexImage2D(GL_TEXTURE_2D, 0,GL_DEPTH_COMPONENT16, w, h, 0, GL_DEPTH_COMPONENT, GL_FLOAT, 0);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_R_TO_TEXTURE);
+	*/
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT,
+	             w, h, 0, GL_DEPTH_COMPONENT, GL_INT, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	return depth_map;
+}
+
+GLuint create_depth_buffer(int w, int h, GLuint *depth_map) {
+	GLuint depth_framebuffer = 0;
+	glGenFramebuffers(1, &depth_framebuffer);
+	*depth_map = create_depth_map(w, h);
+
+	glBindFramebuffer(GL_FRAMEBUFFER, depth_framebuffer);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D ,*depth_map, 0);
+	glDrawBuffer(GL_NONE);
+	glReadBuffer(GL_NONE);
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+		printf("-=-= ERROR: creating depth framebuffer failed\n");
+	}
+	return depth_framebuffer;
+}
+
+
 GLint load_texture_to_uniform(const char *filename, const char *unif_name, GLuint shaderProgram, GLuint *tex, GLenum tex_num, GLint tex_idx) {
 	int tw,th,tn;
 	unsigned char *image_data = stbi_load(filename, &tw, &th, &tn, 0);
 	printf("image %s is %d x %d with %d components\n",filename, tw, th, tn);
-	GLint texUnif;
 	glGenTextures(1, tex);
+
 	glActiveTexture(tex_num);
 	glBindTexture(GL_TEXTURE_2D, *tex);
+
 	printf("TEXTURE ID is %d, tex_num is %d, tex_idx is %d\n", *tex, tex_num, tex_idx);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tw, th, 0, GL_RGBA, GL_UNSIGNED_BYTE, image_data);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	//glGenerateMipmap(GL_TEXTURE_2D);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST_MIPMAP_LINEAR);
+	glGenerateMipmap(GL_TEXTURE_2D);
 	stbi_image_free(image_data);
+
+	GLint texUnif;
 	texUnif = glGetUniformLocation(shaderProgram, unif_name);
 	glUniform1i(texUnif, tex_idx);
 	return texUnif;
 }
 
-GLuint create_geom_shader_program(const char *vert_file_name, const char *geom_file_name, const char *frag_file_name) {
+GLint bind_texture_to_uniform(const char *unif_name, GLuint shaderProgram, GLuint *tex, GLenum tex_num, GLint tex_idx) {
+	GLint texUnif;
+	glActiveTexture(tex_num);
+	glBindTexture(GL_TEXTURE_2D, *tex);
+	texUnif = glGetUniformLocation(shaderProgram, unif_name);
+	glUniform1i(texUnif, tex_idx);
+	return texUnif;
+}
+
+GLuint create_geom_shader_program(const char *vert_file_name, const char *geom_file_name, const char *frag_file_name, bool depth) {
 	const GLchar* vertex_shader = load_file(vert_file_name);
 	const GLchar* geom_shader = load_file(geom_file_name);
 	const GLchar* fragment_shader = load_file(frag_file_name);
@@ -140,7 +225,7 @@ GLuint create_geom_shader_program(const char *vert_file_name, const char *geom_f
 	glAttachShader(shaderProgram, vertexShader);
 	glAttachShader(shaderProgram, geomShader);
 	glAttachShader(shaderProgram, fragmentShader);
-	glBindFragDataLocation(shaderProgram, 0, "outColor");
+	if (!depth) glBindFragDataLocation(shaderProgram, 0, "outColor");
 	glLinkProgram(shaderProgram);
 
 	GLint isLinked = 0;
@@ -154,40 +239,67 @@ GLuint create_geom_shader_program(const char *vert_file_name, const char *geom_f
 		printf("%s\n", buffer);
 	}
 
-
 	return shaderProgram;
 }
 
-GLuint create_sprite_shader_program(const char *vert_file_name, const char *geom_file_name, const char *frag_file_name,
-                                    const char *tex_file_name, int tex_w, int tex_h, GLfloat *vp_mat, GLuint *tex_id) {
-	GLuint shaderProgram = create_geom_shader_program(vert_file_name, geom_file_name, frag_file_name);
-	glUseProgram(shaderProgram);
-	GLint viewProjUnif = glGetUniformLocation(shaderProgram, "vp");
-	glUniformMatrix4fv(viewProjUnif, 1, GL_FALSE, vp_mat);
-	GLint texMultUnif = glGetUniformLocation(shaderProgram, "tex_mult");
-	float mx = 1.0f / (float)tex_w;
-	float my = 1.0f / (float)tex_h;
+void create_depth_shader_program(render_def *rd) {
+	rd->use_depth = true;
+	rd->depth_framebuffer = create_depth_buffer(rd->depth_viewport_w, rd->depth_viewport_h, &rd->depth_tex);
+	glBindFramebuffer(GL_FRAMEBUFFER, rd->depth_framebuffer);
+	rd->depth_shader = create_geom_shader_program(rd->depth_vert_shader, rd->depth_geom_shader, rd->depth_frag_shader, true);
+	glUseProgram(rd->depth_shader);
+	GLint depthViewProjUnif = glGetUniformLocation(rd->depth_shader, "depth_vp");
+	glUniformMatrix4fv(depthViewProjUnif, 1, GL_FALSE, rd->depth_vp_mat);
+	GLint depthTexMultUnif = glGetUniformLocation(rd->depth_shader, "tex_mult");
+	float dmx = 1.0f / (float)rd->cols;
+	float dmy = 1.0f / (float)rd->rows;
+	glUniform2f(depthTexMultUnif, dmx, dmy);
+
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	rd->shader = create_geom_shader_program(rd->vert_shader, rd->geom_shader, rd->frag_shader, false);
+	glUseProgram(rd->shader);
+	GLint viewProjUnif = glGetUniformLocation(rd->shader, "vp");
+	glUniformMatrix4fv(viewProjUnif, 1, GL_FALSE, rd->vp_mat);
+	GLint depthBiasUnif = glGetUniformLocation(rd->shader, "depth_bias_vp");
+	glUniformMatrix4fv(depthBiasUnif, 1, GL_FALSE, rd->depth_vp_mat);
+	GLint texMultUnif = glGetUniformLocation(rd->shader, "tex_mult");
+	float mx = 1.0f / (float)rd->cols;
+	float my = 1.0f / (float)rd->rows;
 	glUniform2f(texMultUnif, mx, my);
-	GLuint tex;
-	GLint texUnif = load_texture_to_uniform(tex_file_name, "tex", shaderProgram, &tex, GL_TEXTURE0, 0);
-	*tex_id = tex;
-	return shaderProgram;
+	GLint texUnif = load_texture_to_uniform(rd->sprite_sheet, "tex", rd->shader, &rd->tex, GL_TEXTURE0, 0);
+	GLint depthTexUnif = bind_texture_to_uniform("shadow_map", rd->shader, &rd->depth_tex, GL_TEXTURE1, 1);
+	create_sprite_render_buf(rd);
+	glBindFramebuffer(GL_FRAMEBUFFER, rd->depth_framebuffer);
+	glUseProgram(rd->depth_shader);
+	set_sprite_render_attribs(rd->depth_shader, rd->item_size);
 }
 
-GLuint create_line_shader_program(const char *vert_file_name, const char *geom_file_name, const char *frag_file_name,
-                                  GLfloat *vp_mat, GLfloat line_scale) {
-	GLuint shaderProgram = create_geom_shader_program(vert_file_name, geom_file_name, frag_file_name);
-	glUseProgram(shaderProgram);
-	GLint viewProjUnif = glGetUniformLocation(shaderProgram, "vp");
-	glUniformMatrix4fv(viewProjUnif, 1, GL_FALSE, vp_mat);
-	GLint lineScaleUnif = glGetUniformLocation(shaderProgram, "scale");
-	glUniform1f(lineScaleUnif, line_scale);
-	return shaderProgram;
+void create_sprite_shader_program(render_def *rd) {
+	rd->shader = create_geom_shader_program(rd->vert_shader, rd->geom_shader, rd->frag_shader, false);
+	glUseProgram(rd->shader);
+	GLint viewProjUnif = glGetUniformLocation(rd->shader, "vp");
+	glUniformMatrix4fv(viewProjUnif, 1, GL_FALSE, rd->vp_mat);
+	GLint texMultUnif = glGetUniformLocation(rd->shader, "tex_mult");
+	float mx = 1.0f / (float)rd->cols;
+	float my = 1.0f / (float)rd->rows;
+	glUniform2f(texMultUnif, mx, my);
+	GLint texUnif = load_texture_to_uniform(rd->sprite_sheet, "tex", rd->shader, &rd->tex, GL_TEXTURE0, 0);
+	create_sprite_render_buf(rd);
 }
 
-void update_view_mat(render_buf *rb, GLfloat *mat) {
-	glUseProgram(rb->shader);
-	GLint viewProjUnif = glGetUniformLocation(rb->shader, "vp");
+void create_line_shader_program(render_def *rd) {
+	rd->shader = create_geom_shader_program(rd->vert_shader, rd->geom_shader, rd->frag_shader, false);
+	glUseProgram(rd->shader);
+	GLint viewProjUnif = glGetUniformLocation(rd->shader, "vp");
+	glUniformMatrix4fv(viewProjUnif, 1, GL_FALSE, rd->vp_mat);
+	GLint lineScaleUnif = glGetUniformLocation(rd->shader, "scale");
+	glUniform1f(lineScaleUnif, rd->line_scale);
+	create_line_render_buf(rd);
+}
+
+void update_view_mat(render_def *rd, GLfloat *mat) {
+	glUseProgram(rd->shader);
+	GLint viewProjUnif = glGetUniformLocation(rd->shader, "vp");
 	glUniformMatrix4fv(viewProjUnif, 1, GL_FALSE, mat);
 }
 
@@ -196,220 +308,300 @@ void free_shader_program(GLuint shader_program) {
 }
 
 void init_render_environment() {
-	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+	glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_LESS);
 	//glFrontFace(GL_CW);
 	glEnable(GL_CULL_FACE);
 	glCullFace(GL_FRONT);
-	//glDisable(GL_CLIP_PLANE0);
-	glEnable(GL_BLEND);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	glDisable(GL_CLIP_PLANE0);
+	//glEnable(GL_BLEND);
+	//glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 }
 
-render_buf *create_sprite_render_buf(int max_items, GLuint shader_program, GLuint tex_id) {
-	render_buf *rb = (render_buf *)malloc(sizeof(render_buf));
-	rb->draw_type = GL_POINTS;
-	rb->num_items = max_items;
-	rb->item_size = 12;
-	rb->array_size = rb->num_items * rb->item_size * sizeof(GLfloat);
-	rb->num_bufs = 3;
-	rb->buf_idx = 0;
-	rb->item_idx = 0;
-	rb->shader = shader_program;
-	rb->tex_id = tex_id;
-	rb->fences = (GLsync *)malloc(rb->num_bufs * sizeof(GLsync));
-	for (int i=0; i<rb->num_bufs; i++) rb->fences[i] = NULL;
-	//rb->buf = (GLfloat *)malloc((size_t)rb->array_size);
-	glGenVertexArrays(1, &rb->vao);
-	glGenBuffers(1, &rb->vbo);
-
+void set_sprite_render_attribs(GLuint shader, int item_size) {
 	GLenum err;
-	glBindVertexArray(rb->vao);
-	// the VBO of points (locations of sprites)
-	glBindBuffer(GL_ARRAY_BUFFER, rb->vbo);
-
-	GLuint posAttrib = (GLuint)glGetAttribLocation(shader_program, "position");
+	GLuint posAttrib = (GLuint)glGetAttribLocation(shader, "position");
 	glEnableVertexAttribArray(posAttrib);
-	glVertexAttribPointer(posAttrib, 3, GL_FLOAT, GL_FALSE, rb->item_size * sizeof(GLfloat), 0);
+	glVertexAttribPointer(posAttrib, 3, GL_FLOAT, GL_FALSE, item_size * sizeof(GLfloat), 0);
 	err = glGetError();
 	if (err != GL_NO_ERROR) {
 		printf("posAttrib is %d: %d\n", posAttrib, err);
 	}
 
 	// map the color data to an input on the shader
-	GLuint colorAttrib = (GLuint)glGetAttribLocation(shader_program, "color");
+	GLuint colorAttrib = (GLuint)glGetAttribLocation(shader, "color");
 	glEnableVertexAttribArray(colorAttrib);
-	glVertexAttribPointer(colorAttrib, 3, GL_FLOAT, GL_FALSE, rb->item_size * sizeof(GLfloat), (void *)(3 * sizeof(GLfloat)));
+	glVertexAttribPointer(colorAttrib, 3, GL_FLOAT, GL_FALSE, item_size * sizeof(GLfloat), (void *)(3 * sizeof(GLfloat)));
 	err = glGetError();
 	if (err != GL_NO_ERROR) {
 		printf("colorAttrib is %d: %d\n", colorAttrib, err);
 	}
 
 	// map the scale/rotation data to an input on the shader
-	GLuint scaleRotAttrib = (GLuint)glGetAttribLocation(shader_program, "scale_rot");
+	GLuint scaleRotAttrib = (GLuint)glGetAttribLocation(shader, "scale_rot");
 	glEnableVertexAttribArray(scaleRotAttrib);
-	glVertexAttribPointer(scaleRotAttrib, 3, GL_FLOAT, GL_FALSE, rb->item_size * sizeof(GLfloat), (void *)(6 * sizeof(GLfloat)));
+	glVertexAttribPointer(scaleRotAttrib, 3, GL_FLOAT, GL_FALSE, item_size * sizeof(GLfloat), (void *)(6 * sizeof(GLfloat)));
 	err = glGetError();
 	if (err != GL_NO_ERROR) {
 		printf("scaleRotAttrib is %d: %d\n", scaleRotAttrib, err);
 	}
 
 	// map the sprite location data to an input on the shader
-	GLuint sprOffsetAttrib = (GLuint)glGetAttribLocation(shader_program, "spr_offset");
+	GLuint sprOffsetAttrib = (GLuint)glGetAttribLocation(shader, "spr_offset");
 	glEnableVertexAttribArray(sprOffsetAttrib);
-	glVertexAttribPointer(sprOffsetAttrib, 3, GL_FLOAT, GL_FALSE, rb->item_size * sizeof(GLfloat), (void *)(9 * sizeof(GLfloat)));
+	glVertexAttribPointer(sprOffsetAttrib, 3, GL_FLOAT, GL_FALSE, item_size * sizeof(GLfloat), (void *)(9 * sizeof(GLfloat)));
 	err = glGetError();
 	if (err != GL_NO_ERROR) {
 		printf("sprOffsetAttrib is %d: %d\n", sprOffsetAttrib, err);
 	}
 
-	glBufferData(GL_ARRAY_BUFFER, rb->array_size * rb->num_bufs, NULL, GL_STREAM_DRAW);
-	err = glGetError();
-	if (err != GL_NO_ERROR) {
-		printf("buffer data: %d\n", err);
-	}
-
-	return rb;
 }
 
-render_buf *create_line_render_buf(int max_items, GLuint shader_program) {
-	render_buf *rb = (render_buf *)malloc(sizeof(render_buf));
-	rb->draw_type = GL_LINES;
-	rb->num_items = max_items;
-	rb->item_size = 6;
-	rb->array_size = rb->num_items * rb->item_size * sizeof(GLfloat);
-	rb->num_bufs = 3;
-	rb->buf_idx = 0;
-	rb->item_idx = 0;
-	rb->shader = shader_program;
-	rb->tex_id = 0;
-	rb->fences = (GLsync *)malloc(rb->num_bufs * sizeof(GLsync));
-	for (int i=0; i<rb->num_bufs; i++) rb->fences[i] = NULL;
+void create_sprite_render_buf(render_def *rd) {
+	rd->draw_type = GL_POINTS;
+	rd->num_items = rd->rbuf_size;
+	rd->item_size = 12;
+	rd->array_size = rd->num_items * rd->item_size * sizeof(GLfloat);
+	rd->num_bufs = 3;
+	rd->buf_idx = 0;
+	rd->item_idx = 0;
+	rd->fences = (GLsync *)malloc(rd->num_bufs * sizeof(GLsync));
+	for (int i=0; i<rd->num_bufs; i++) rd->fences[i] = NULL;
 	//rb->buf = (GLfloat *)malloc((size_t)rb->array_size);
-	glGenVertexArrays(1, &rb->vao);
-	glGenBuffers(1, &rb->vbo);
+	glGenVertexArrays(1, &rd->vao);
+	glGenBuffers(1, &rd->vbo);
 
 	GLenum err;
-	glBindVertexArray(rb->vao);
+	glBindVertexArray(rd->vao);
 	// the VBO of points (locations of sprites)
-	glBindBuffer(GL_ARRAY_BUFFER, rb->vbo);
+	glBindBuffer(GL_ARRAY_BUFFER, rd->vbo);
 
-	GLuint posAttrib = (GLuint)glGetAttribLocation(shader_program, "position");
+	set_sprite_render_attribs(rd->shader, rd->item_size);
+	/*
+	GLuint posAttrib = (GLuint)glGetAttribLocation(rd->shader, "position");
 	glEnableVertexAttribArray(posAttrib);
-	glVertexAttribPointer(posAttrib, 3, GL_FLOAT, GL_FALSE, rb->item_size * sizeof(GLfloat), 0);
+	glVertexAttribPointer(posAttrib, 3, GL_FLOAT, GL_FALSE, rd->item_size * sizeof(GLfloat), 0);
 	err = glGetError();
 	if (err != GL_NO_ERROR) {
 		printf("posAttrib is %d: %d\n", posAttrib, err);
 	}
 
 	// map the color data to an input on the shader
-	GLuint colorAttrib = (GLuint)glGetAttribLocation(shader_program, "color");
+	GLuint colorAttrib = (GLuint)glGetAttribLocation(rd->shader, "color");
 	glEnableVertexAttribArray(colorAttrib);
-	glVertexAttribPointer(colorAttrib, 3, GL_FLOAT, GL_FALSE, rb->item_size * sizeof(GLfloat), (void *)(3 * sizeof(GLfloat)));
+	glVertexAttribPointer(colorAttrib, 3, GL_FLOAT, GL_FALSE, rd->item_size * sizeof(GLfloat), (void *)(3 * sizeof(GLfloat)));
 	err = glGetError();
 	if (err != GL_NO_ERROR) {
 		printf("colorAttrib is %d: %d\n", colorAttrib, err);
 	}
 
-	glBufferData(GL_ARRAY_BUFFER, rb->array_size * rb->num_bufs, NULL, GL_STREAM_DRAW);
+	// map the scale/rotation data to an input on the shader
+	GLuint scaleRotAttrib = (GLuint)glGetAttribLocation(rd->shader, "scale_rot");
+	glEnableVertexAttribArray(scaleRotAttrib);
+	glVertexAttribPointer(scaleRotAttrib, 3, GL_FLOAT, GL_FALSE, rd->item_size * sizeof(GLfloat), (void *)(6 * sizeof(GLfloat)));
+	err = glGetError();
+	if (err != GL_NO_ERROR) {
+		printf("scaleRotAttrib is %d: %d\n", scaleRotAttrib, err);
+	}
+
+	// map the sprite location data to an input on the shader
+	GLuint sprOffsetAttrib = (GLuint)glGetAttribLocation(rd->shader, "spr_offset");
+	glEnableVertexAttribArray(sprOffsetAttrib);
+	glVertexAttribPointer(sprOffsetAttrib, 3, GL_FLOAT, GL_FALSE, rd->item_size * sizeof(GLfloat), (void *)(9 * sizeof(GLfloat)));
+	err = glGetError();
+	if (err != GL_NO_ERROR) {
+		printf("sprOffsetAttrib is %d: %d\n", sprOffsetAttrib, err);
+	}
+	*/
+
+	glBufferData(GL_ARRAY_BUFFER, rd->array_size * rd->num_bufs, NULL, GL_STREAM_DRAW);
 	err = glGetError();
 	if (err != GL_NO_ERROR) {
 		printf("buffer data: %d\n", err);
 	}
-
-	return rb;
 }
 
-void free_render_buf(render_buf *rb) {
-	glDeleteBuffers(1, &rb->vbo);
-	glDeleteVertexArrays(1, &rb->vao);
-	free(rb->fences);
-	//free(rb->buf);
-}
+void create_line_render_buf(render_def *rd) {
+	rd->draw_type = GL_LINES;
+	rd->num_items = rd->rbuf_size;
+	rd->item_size = 6;
+	rd->array_size = rd->num_items * rd->item_size * sizeof(GLfloat);
+	rd->num_bufs = 3;
+	rd->buf_idx = 0;
+	rd->item_idx = 0;
+	rd->fences = (GLsync *)malloc(rd->num_bufs * sizeof(GLsync));
+	for (int i=0; i<rd->num_bufs; i++) rd->fences[i] = NULL;
+	//rb->buf = (GLfloat *)malloc((size_t)rb->array_size);
+	glGenVertexArrays(1, &rd->vao);
+	glGenBuffers(1, &rd->vbo);
 
-int init_render(render_buf *rb) {
-	// just starting a buffer. we need to wait and map on that shit
-	if (rb->item_idx == 0) {
-		glBindVertexArray(rb->vao);
-		if (rb->fences[rb->buf_idx] != NULL) {
-			GLenum state = glClientWaitSync(rb->fences[rb->buf_idx], GL_SYNC_FLUSH_COMMANDS_BIT, 1000000000);
-			if (state == GL_TIMEOUT_EXPIRED || state == GL_WAIT_FAILED) {
-				printf("wait for fence on buf_idx %d failed with error %d\n", rb->buf_idx, state);
-			}
-			glDeleteSync(rb->fences[rb->buf_idx]);
-			rb->fences[rb->buf_idx] = NULL;
-		}
-		glBindBuffer(GL_ARRAY_BUFFER, rb->vbo);
-		int map_start = rb->buf_idx * rb->num_items * rb->item_size * sizeof(GLfloat);
-		int buf_len = rb->num_items * rb->item_size * sizeof(GLfloat);
-		rb->buf = (GLfloat *)glMapBufferRange(GL_ARRAY_BUFFER, map_start, buf_len, GL_MAP_WRITE_BIT|GL_MAP_UNSYNCHRONIZED_BIT);
-		if (rb->buf == NULL) printf("failed to map buffer for buf_idx %d\n", rb->buf_idx);
+	GLenum err;
+	glBindVertexArray(rd->vao);
+	// the VBO of points (locations of sprites)
+	glBindBuffer(GL_ARRAY_BUFFER, rd->vbo);
+
+	GLuint posAttrib = (GLuint)glGetAttribLocation(rd->shader, "position");
+	glEnableVertexAttribArray(posAttrib);
+	glVertexAttribPointer(posAttrib, 3, GL_FLOAT, GL_FALSE, rd->item_size * sizeof(GLfloat), 0);
+	err = glGetError();
+	if (err != GL_NO_ERROR) {
+		printf("posAttrib is %d: %d\n", posAttrib, err);
 	}
-	if (rb->item_idx == rb->num_items) {
-		printf("can't render to buf_idx %d: overflow\n", rb->buf_idx);
+
+	// map the color data to an input on the shader
+	GLuint colorAttrib = (GLuint)glGetAttribLocation(rd->shader, "color");
+	glEnableVertexAttribArray(colorAttrib);
+	glVertexAttribPointer(colorAttrib, 3, GL_FLOAT, GL_FALSE, rd->item_size * sizeof(GLfloat), (void *)(3 * sizeof(GLfloat)));
+	err = glGetError();
+	if (err != GL_NO_ERROR) {
+		printf("colorAttrib is %d: %d\n", colorAttrib, err);
+	}
+
+	glBufferData(GL_ARRAY_BUFFER, rd->array_size * rd->num_bufs, NULL, GL_STREAM_DRAW);
+	err = glGetError();
+	if (err != GL_NO_ERROR) {
+		printf("buffer data: %d\n", err);
+	}
+}
+
+void free_render_def(render_def *rd) {
+	glDeleteBuffers(1, &rd->vbo);
+	glDeleteVertexArrays(1, &rd->vao);
+	free(rd->fences);
+	free_shader_program(rd->shader);
+	if (rd->depth_shader != 0) free_shader_program(rd->depth_shader);
+	if (rd->vp_mat != NULL) free(rd->vp_mat);
+	if (rd->depth_vp_mat != NULL) free(rd->depth_vp_mat);
+	if (rd->depth_bias_mat != NULL) free(rd->depth_bias_mat);
+}
+
+int init_render(render_def *rd) {
+	// just starting a buffer. we need to wait and map on that shit
+	if (rd->item_idx == 0) {
+		glBindVertexArray(rd->vao);
+		if (rd->fences[rd->buf_idx] != NULL) {
+			GLenum state = glClientWaitSync(rd->fences[rd->buf_idx], GL_SYNC_FLUSH_COMMANDS_BIT, 1000000000);
+			if (state == GL_TIMEOUT_EXPIRED || state == GL_WAIT_FAILED) {
+				printf("wait for fence on buf_idx %d failed with error %d\n", rd->buf_idx, state);
+			}
+			glDeleteSync(rd->fences[rd->buf_idx]);
+			rd->fences[rd->buf_idx] = NULL;
+		}
+		glBindBuffer(GL_ARRAY_BUFFER, rd->vbo);
+		int map_start = rd->buf_idx * rd->num_items * rd->item_size * sizeof(GLfloat);
+		int buf_len = rd->num_items * rd->item_size * sizeof(GLfloat);
+		rd->buf = (GLfloat *)glMapBufferRange(GL_ARRAY_BUFFER, map_start, buf_len, GL_MAP_WRITE_BIT|GL_MAP_UNSYNCHRONIZED_BIT);
+		if (rd->buf == NULL) printf("failed to map buffer for buf_idx %d\n", rd->buf_idx);
+	}
+	if (rd->item_idx == rd->num_items) {
+		printf("can't render to buf_idx %d: overflow\n", rd->buf_idx);
 		return -1;
 	}
 	return 1;
 }
 
-void render_sprite(render_buf *rb, sprite *s) {
-	if (init_render(rb) < 0) return;
-	int idx = rb->item_idx * rb->item_size;
-	rb->buf[idx++] = s->x;
-	rb->buf[idx++] = s->y;
-	rb->buf[idx++] = s->z;
-	rb->buf[idx++] = s->r;
-	rb->buf[idx++] = s->g;
-	rb->buf[idx++] = s->b;
-	rb->buf[idx++] = s->scale_x;
-	rb->buf[idx++] = s->scale_y;
-	rb->buf[idx++] = s->rot;
-	rb->buf[idx++] = s->spr_row;
-	rb->buf[idx++] = s->spr_col;
-	rb->buf[idx] = s->spr_extra;
-	rb->item_idx++;
+void render_sprite(render_def *rd, sprite *s) {
+	if (init_render(rd) < 0) return;
+	int idx = rd->item_idx * rd->item_size;
+	rd->buf[idx++] = s->x;
+	rd->buf[idx++] = s->y;
+	rd->buf[idx++] = s->z;
+	rd->buf[idx++] = s->r;
+	rd->buf[idx++] = s->g;
+	rd->buf[idx++] = s->b;
+	rd->buf[idx++] = s->scale_x;
+	rd->buf[idx++] = s->scale_y;
+	rd->buf[idx++] = s->rot;
+	rd->buf[idx++] = s->spr_row;
+	rd->buf[idx++] = s->spr_col;
+	rd->buf[idx] = s->spr_extra;
+	rd->item_idx++;
 }
 
-void render_line(render_buf *rb, line *l) {
-	if (init_render(rb) < 0) return;
-	int idx = rb->item_idx * rb->item_size;
-	rb->buf[idx++] = l->p1.x;
-	rb->buf[idx++] = l->p1.y;
-	rb->buf[idx++] = l->p1.z;
-	rb->buf[idx++] = l->p1.r;
-	rb->buf[idx++] = l->p1.g;
-	rb->buf[idx++] = l->p1.b;
-	rb->buf[idx++] = l->p2.x;
-	rb->buf[idx++] = l->p2.y;
-	rb->buf[idx++] = l->p2.z;
-	rb->buf[idx++] = l->p2.r;
-	rb->buf[idx++] = l->p2.g;
-	rb->buf[idx] = l->p2.b;
-	rb->item_idx+=2;
+void render_line(render_def *rd, line *l) {
+	if (init_render(rd) < 0) return;
+	int idx = rd->item_idx * rd->item_size;
+	rd->buf[idx++] = l->p1.x;
+	rd->buf[idx++] = l->p1.y;
+	rd->buf[idx++] = l->p1.z;
+	rd->buf[idx++] = l->p1.r;
+	rd->buf[idx++] = l->p1.g;
+	rd->buf[idx++] = l->p1.b;
+	rd->buf[idx++] = l->p2.x;
+	rd->buf[idx++] = l->p2.y;
+	rd->buf[idx++] = l->p2.z;
+	rd->buf[idx++] = l->p2.r;
+	rd->buf[idx++] = l->p2.g;
+	rd->buf[idx] = l->p2.b;
+	rd->item_idx+=2;
 }
 
-void render_buffer(render_buf *rb) {
-	if (rb->tex_id > 0) {
+void render_buffer_normal(render_def *rd) {
+	if (rd->tex > 0) {
 		//glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, rb->tex_id);
+		glBindTexture(GL_TEXTURE_2D, rd->tex);
 	}
-	glBindVertexArray(rb->vao);
-	glBindBuffer(GL_ARRAY_BUFFER, rb->vbo);
-	glUseProgram(rb->shader);
-	if (rb->item_idx > 0) {
-		glDrawArrays(rb->draw_type, rb->buf_idx * rb->num_items, rb->item_idx);
+	glBindVertexArray(rd->vao);
+	glBindBuffer(GL_ARRAY_BUFFER, rd->vbo);
+	glUseProgram(rd->shader);
+	if (rd->item_idx > 0) {
+		glDrawArrays(rd->draw_type, rd->buf_idx * rd->num_items, rd->item_idx);
 	}
 }
 
-void render_advance(render_buf *rb) {
-	glBindVertexArray(rb->vao);
-	glBindBuffer(GL_ARRAY_BUFFER, rb->vbo);
+void render_buffer_depth(render_def *rd) {
+	glViewport(0, 0, rd->depth_viewport_w, rd->depth_viewport_h);
+	glBindFramebuffer(GL_FRAMEBUFFER, rd->depth_framebuffer);
+	glClear(GL_DEPTH_BUFFER_BIT);
+	glUseProgram(rd->depth_shader);
+	GLint depthViewProjUnif = glGetUniformLocation(rd->depth_shader, "depth_vp");
+	glUniformMatrix4fv(depthViewProjUnif, 1, GL_FALSE, rd->depth_vp_mat);
+
+	glBindVertexArray(rd->vao);
+	glBindBuffer(GL_ARRAY_BUFFER, rd->vbo);
+	if (rd->item_idx > 0) {
+		glDrawArrays(rd->draw_type, rd->buf_idx * rd->num_items, rd->item_idx);
+	}
+
+	glViewport(0, 0, rd->viewport_w, rd->viewport_h);
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	glUseProgram(rd->shader);
+	GLint depthBiasUnif = glGetUniformLocation(rd->shader, "depth_bias_vp");
+	glUniformMatrix4fv(depthBiasUnif, 1, GL_FALSE, rd->depth_vp_mat);
+	GLint viewProjUnif = glGetUniformLocation(rd->shader, "vp");
+	glUniformMatrix4fv(viewProjUnif, 1, GL_FALSE, rd->vp_mat);
+
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, rd->tex);
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, rd->depth_tex);
+
+	glBindVertexArray(rd->vao);
+	glBindBuffer(GL_ARRAY_BUFFER, rd->vbo);
+	if (rd->item_idx > 0) {
+		glDrawArrays(rd->draw_type, rd->buf_idx * rd->num_items, rd->item_idx);
+	}
+}
+
+
+void render_buffer(render_def *rd) {
+	if (rd->use_depth) {
+		render_buffer_depth(rd);
+	} else {
+		render_buffer_normal(rd);
+	}
+}
+
+void render_advance(render_def *rd) {
+	glBindVertexArray(rd->vao);
+	glBindBuffer(GL_ARRAY_BUFFER, rd->vbo);
 	glUnmapBuffer(GL_ARRAY_BUFFER);
-	rb->fences[rb->buf_idx] = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
+	rd->fences[rd->buf_idx] = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	glBindVertexArray(0);
-	rb->buf_idx = ((rb->buf_idx + 1) % rb->num_bufs);
-	rb->item_idx = 0;
+	rd->buf_idx = ((rd->buf_idx + 1) % rd->num_bufs);
+	rd->item_idx = 0;
 };
 

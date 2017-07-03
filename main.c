@@ -16,6 +16,9 @@
 #define SCREEN_W 1024
 #define SCREEN_H 640
 
+#define DEPTH_MAP_W 2048
+#define DEPTH_MAP_H 1024
+
 #define LEFT    1
 #define ABOVE   2
 #define RIGHT   4
@@ -356,11 +359,11 @@ void run_trifle() {
 
 	const char *config_filename = "/Users/dmk/code/pectin/config/render_defs.cfg";
 	// setup rendering for particles (water and boids)
-	render_def *part_def = load_render_def(config_filename, "particles", (GLfloat *)&sd.vp_mat);
+	render_def *part_def = load_render_def(config_filename, "particles", (GLfloat *)&sd.vp_mat, NULL, NULL);
 	// set up rendering for the player character
-	render_def *trif_def = load_render_def(config_filename, "player", (GLfloat *)&sd.vp_mat);
+	render_def *trif_def = load_render_def(config_filename, "player", (GLfloat *)&sd.vp_mat, NULL, NULL);
 	// set up rendering for blocks
-	render_def *block_def = load_render_def(config_filename, "blocks", (GLfloat *)&sd.vp_mat);
+	render_def *block_def = load_render_def(config_filename, "blocks", (GLfloat *)&sd.vp_mat, NULL, NULL);
 
 	// create some particles using the pobj structure (used for non-interactive things)
 	pobj parts[360];
@@ -408,7 +411,7 @@ void run_trifle() {
 				int ridx = (tidx - 1) / block_def->cols;
 				int cidx = (tidx - 1) % block_def->cols;
 				sprite_for((float)x, (float)y, l, ridx, cidx, s, block_def);
-				render_sprite(block_def->rbuf, s);
+				render_sprite(block_def, s);
 			}
 		}
 	}
@@ -463,39 +466,36 @@ void run_trifle() {
 
 		clock_gettime(CLOCK_REALTIME, &t1);
 
-		render_advance(trif_def->rbuf);
+		render_advance(trif_def);
 		sprite_for(trif.x, trif.y, 1, trif.row, (trif.col / mult), s, trif_def);
-		render_sprite(trif_def->rbuf, s);
+		render_sprite(trif_def, s);
 		if ((frame % 2) == 0) update_boids(bl);
 		bl->ax = s->x;
 		bl->ay = s->y;
 
-		render_advance(part_def->rbuf);
+		render_advance(part_def);
 		for (int i=0; i<360; i++) {
 			update_particle(&parts[i]);
 			sprite_for_pobj(&parts[i], s, 1, part_def);
-			render_sprite(part_def->rbuf, s);
+			render_sprite(part_def, s);
 		}
 		for (int i=0; i<bl->num_boids; i++) {
 			sprite_for_boid(bl->boids[i], s, 0, part_def);
-			render_sprite(part_def->rbuf, s);
+			render_sprite(part_def, s);
 		}
 
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		render_buffer(block_def->rbuf);
-		render_buffer(trif_def->rbuf);
-		render_buffer(part_def->rbuf);
+		render_buffer(block_def);
+		render_buffer(trif_def);
+		render_buffer(part_def);
 		swap_window();
 		frame += 1;
 		if (frame == 60) frame = 0;
 	}
 	free(s);
-	free_shader_program(block_def->shader);
-	free_shader_program(trif_def->shader);
-	free_shader_program(part_def->shader);
-	free_render_buf(block_def->rbuf);
-	free_render_buf(trif_def->rbuf);
-	free_render_buf(part_def->rbuf);
+	free_render_def(block_def);
+	free_render_def(trif_def);
+	free_render_def(part_def);
 }
 
 int project_trajectory(phys_def *phys, line *proj, float x, float y, float vx, float vy) {
@@ -642,13 +642,13 @@ void run_throw() {
 
 	const char *config_filename = "/Users/dmk/code/pectin/config/throw_render_defs.cfg";
 	// set up rendering for the player character
-	render_def *ball_def = load_render_def(config_filename, "ball", (GLfloat *)&sd.vp_mat);
+	render_def *ball_def = load_render_def(config_filename, "ball", (GLfloat *)&sd.vp_mat, NULL, NULL);
 	// set up rendering for blocks
-	render_def *block_def = load_render_def(config_filename, "blocks", (GLfloat *)&sd.vp_mat);
+	render_def *block_def = load_render_def(config_filename, "blocks", (GLfloat *)&sd.vp_mat, NULL, NULL);
 	// set up rendering for lines
-	render_def *line_def = load_render_def(config_filename, "lines", (GLfloat *)&sd.vp_mat);
+	render_def *line_def = load_render_def(config_filename, "lines", (GLfloat *)&sd.vp_mat, NULL, NULL);
 	// set up rendering for font
-	render_def *font_def = load_render_def(config_filename, "font", (GLfloat *)&sd.vp_mat);
+	render_def *font_def = load_render_def(config_filename, "font", (GLfloat *)&sd.vp_mat, NULL, NULL);
 
 	// create the player, using the dobj structure (for dynamic objects that have physics and collide)
 	dobj ball = {16, 8, 0, 0, 0.499f, 0.499f, 2, 0, false, false, false, true, false, false};
@@ -683,7 +683,7 @@ void run_throw() {
 			int ridx = (tidx - 1) / block_def->cols;
 			int cidx = (tidx - 1) % block_def->cols;
 			sprite_for((float)x, (float)y, 0, ridx, cidx, s, block_def);
-			render_sprite(block_def->rbuf, s);
+			render_sprite(block_def, s);
 		}
 	}
 
@@ -699,7 +699,7 @@ void run_throw() {
 		tx += kern;
 		if (back < 0) tx += (((float)back / 8.0f) * font_def->xscale);
 		sprite_for(tx, txt_y, 0, trow, tcol, s, font_def);
-		render_sprite(font_def->rbuf, s);
+		render_sprite(font_def, s);
 		advance = font_space[ch];
 	}
 	clock_gettime(CLOCK_REALTIME, &t1);
@@ -726,16 +726,16 @@ void run_throw() {
 		//            &handle_horz_collision, &handle_vert_collision);
 		clock_gettime(CLOCK_REALTIME, &t1);
 
-		render_advance(ball_def->rbuf);
+		render_advance(ball_def);
 		cpVect ball_pos = cpBodyGetPosition(body);
 		ball.x = (float)(ball_pos.x - 0.5);
 		ball.y = (float)(ball_pos.y - 0.5);
 		sprite_for(ball.x, ball.y, 1, ball.row, (ball.col / mult), s, ball_def);
-		render_sprite(ball_def->rbuf, s);
+		render_sprite(ball_def, s);
 
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		render_advance(line_def->rbuf);
+		render_advance(line_def);
 		ln.p2.x = (float)start_pos.x;
 		ln.p2.y = (float)start_pos.y;
 		for (int i=0; i<num_bodies; i++) {
@@ -744,24 +744,21 @@ void run_throw() {
 			ln.p1.y = ln.p2.y;
 			ln.p2.x = (float)lpos.x;
 			ln.p2.y = (float)lpos.y;
-			render_line(line_def->rbuf, &ln);
+			render_line(line_def, &ln);
 		}
-		render_buffer(line_def->rbuf);
+		render_buffer(line_def);
 
-		render_buffer(block_def->rbuf);
-		render_buffer(ball_def->rbuf);
-		render_buffer(font_def->rbuf);
+		render_buffer(block_def);
+		render_buffer(ball_def);
+		render_buffer(font_def);
 		swap_window();
 		frame += 1;
 		if (frame == 60) frame = 0;
 	}
 	free(s);
-	free_shader_program(block_def->shader);
-	free_shader_program(ball_def->shader);
-	free_shader_program(line_def->shader);
-	free_render_buf(block_def->rbuf);
-	free_render_buf(ball_def->rbuf);
-	free_render_buf(line_def->rbuf);
+	free_render_def(block_def);
+	free_render_def(ball_def);
+	free_render_def(line_def);
 }
 
 void add_light(GLuint shader, int idx, light *l) {
@@ -807,41 +804,46 @@ void run_box() {
 	float wmx = 0.0f;
 	float wmy = 0.0f;
 
+	//vec3_t dlpos = {10.0f, 10.0f, 30.0f};
+	vec3_t dlpos = {40.0f, 50.0f, 60.0f};
 	// initialize the screen view
 	screen_def sd;
 	init_screen(&sd, SCREEN_W, SCREEN_H, 16, false);
 	//glViewport(-32, -32, 512, 320);
 	print_screen_def(&sd);
+	mat4_t light_mat = get_light_mat(&sd, dlpos);
+	mat4_t light_bias_mat = get_light_bias_mat(&sd, dlpos);
 
 	const char *config_filename = "/Users/dmk/code/pectin/config/box_render_defs.cfg";
 	// set up rendering for blocks
-	render_def *block_def = load_render_def(config_filename, "blocks", (GLfloat *)&sd.vp_mat);
+	render_def *block_def = load_render_def(config_filename, "blocks", (GLfloat *)&sd.vp_mat, (GLfloat *)&light_mat, (GLfloat *)&light_bias_mat);
 	// set up rendering for font
-	render_def *font_def = load_render_def(config_filename, "font", (GLfloat *)&sd.vp_mat);
+	//render_def *font_def = load_render_def(config_filename, "font", (GLfloat *)&sd.vp_mat, NULL, NULL);
 
-	const char *txt = "This is some text that will be on the screen";
+	char txt[255];
 	float txt_x = 1.0f;
-	float txt_y = 18.0f;
-	int txt_len = (int)strlen(txt);
+	float txt_y = 38.0f;
 
 	// set up all the uniforms for lighting
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	glUseProgram(block_def->shader);
 	GLint num_lights_unif = glGetUniformLocation(block_def->shader, "num_lights");
 	printf("num_lights_unif: %d\n", num_lights_unif);
-	glUniform1i(num_lights_unif, 3);
+	glUniform1i(num_lights_unif, 1);
 	GLint camera_pos_unif = glGetUniformLocation(block_def->shader, "camera_pos");
 	printf("camera_pos_unif: %d\n", camera_pos_unif);
 	glUniform3fv(camera_pos_unif, 1, (GLfloat *)&sd.cam_pos);
 	GLint shininess_unif = glGetUniformLocation(block_def->shader, "shininess");
 	printf("shininess_unif: %d\n", shininess_unif);
-	glUniform1f(shininess_unif, 4.0f);
+	glUniform1f(shininess_unif, 100.0f);
 	GLint spec_color_unif = glGetUniformLocation(block_def->shader, "spec_color");
 	printf("spec_color_unif: %d\n", spec_color_unif);
 	glUniform3f(spec_color_unif, 1.0f, 1.0f, 1.0f);
 
+	/*
 	light point_light0 = {
 		{60.0f, 30.0f, 10.0f, 1.0f}, // position
-		{5.0f, 5.0f, 5.0f},       // intensities
+		{8.0f, 8.0f, 8.0f},       // intensities
 		0.1f,                     // attenuation
 		0.00f,                    // ambient_coefficient
 		180.0f,                        // cone angle
@@ -851,26 +853,40 @@ void run_box() {
 
 	light point_light1 = {
 		{4.0f, 10.0f, 10.0f, 1.0f}, // position
-		{4.0f, 4.0f, 4.0f},       // intensities
+		{8.0f, 8.0f, 8.0f},       // intensities
 		0.1f,                     // attenuation
 		0.00f,                    // ambient_coefficient
 		180.0f,                        // cone angle
 		{0.0f, 0.0f, 0.0f}        // cone direction
 	};
 	add_light(block_def->shader, 1, &point_light1);
+	*/
 
 	light dir_light = {
-		{0.0f, 0.8f, 0.6f, 0.0f}, // position
-		{0.2f, 0.3f, 0.4f},       // intensities
+		{dlpos.x, dlpos.y, dlpos.z, 0.0f}, // position
+		{0.8f, 0.9f, 1.0f},       // intensities
 	  0.0f,                     // attenuation
-	  0.001f,                    // ambient_coefficient
+	  0.2f,                    // ambient_coefficient
 	  180.0f,                        // cone angle
 		{0.0f, 0.0f, 0.0f}        // cone direction
 	};
-	add_light(block_def->shader, 2, &dir_light);
+	add_light(block_def->shader, 0, &dir_light);
 
-	GLint lp0_unif = glGetUniformLocation(block_def->shader, "all_lights[0].position");
-	GLint lp1_unif = glGetUniformLocation(block_def->shader, "all_lights[1].position");
+	//GLint lp0_unif = glGetUniformLocation(block_def->shader, "all_lights[0].position");
+	//GLint lp1_unif = glGetUniformLocation(block_def->shader, "all_lights[1].position");
+	glUseProgram(block_def->shader);
+	GLint lp2_unif = glGetUniformLocation(block_def->shader, "all_lights[0].position");
+	printf("lp2_unif is %d\n",lp2_unif);
+
+	int num_boxes;
+	qbox *boxes = load_qubicle_file("/Users/dmk/Desktop/voxel_test/untitled.qb", &num_boxes);
+	/*
+	printf("found %d objects\n", num_boxes);
+	for (int i=0; i<num_boxes; i++) {
+		printf("(%d,%d,%d) - %d %d\n", boxes[i].x, boxes[i].y, boxes[i].z, boxes[i].zsize, boxes[i].thing);
+	}
+	*/
+
 
 	sprite *s = (sprite *)malloc(sizeof(sprite));
 	tile_range lr = {0, 64, 0, 40};
@@ -878,31 +894,21 @@ void run_box() {
 	get_tile_range(&sd, &tr, &lr);
 	bool cam_moved = false;
 	init_render_environment();
+	/*
 	for (int y=tr.b; y<tr.t; y++) {
 		for (int x=tr.l; x<tr.r; x++) {
 			if (rand_int(5) == 0) continue;
 			sprite_for_box((float)x, (float)y, rand_float() * -3.0f, 6.0f, 0, 0, s, block_def);
-			render_sprite(block_def->rbuf, s);
+			render_sprite(block_def, s);
 		}
 	}
-
-	/*
-	int advance = 0;
-	float tx = txt_x;
-	for (int i=0; i<txt_len; i++) {
-		int ch = txt[i] - 32;
-		int trow = ch / 24;
-		int tcol = ch % 24;
-		int back = font_back[ch];
-		float kern = (((float)font_kern / 8.0f) * font_def->xscale);
-		tx += (((float)advance / 8.0f) * font_def->xscale);
-		tx += kern;
-		if (back < 0) tx += (((float)back / 8.0f) * font_def->xscale);
-		sprite_for(tx, txt_y, 0, trow, tcol, s, font_def);
-		render_sprite(font_def->rbuf, s);
-		advance = font_space[ch];
-	}
 	*/
+	for (int i=0; i<num_boxes; i++) {
+		qbox b = boxes[i];
+		sprite_for_box((float)b.x, (float)b.y, b.z, b.zsize, 0, b.thing, s, block_def);
+		render_sprite(block_def, s);
+	}
+
 	clock_gettime(CLOCK_REALTIME, &t1);
 	int frame = 0;
 	while (loop) {
@@ -911,23 +917,58 @@ void run_box() {
 			loop = false;
 		}
 		if (kdown[KEY_LEFT]) {
-			point_light0.position.x -= 0.2f;
-			point_light1.position.x += 0.2f;
+			dlpos.x -= 0.01f;
 		} else if (kdown[KEY_RIGHT]) {
-			point_light0.position.x += 0.2f;
-			point_light1.position.x -= 0.2f;
+			dlpos.x += 0.01f;
+		} else if (kdown[KEY_UP]) {
+			dlpos.y += 0.01f;
+		} else if (kdown[KEY_DOWN]) {
+			dlpos.y -= 0.01f;
+		} else if (kdown[KEY_USE]) {
+			dlpos.z += 0.01f;
+		} else if (kdown[KEY_GRAB]) {
+			dlpos.z -= 0.01f;
 		}
-		glUniform4f(lp0_unif, point_light0.position.x, point_light0.position.y, point_light0.position.z, point_light0.position.w);
-		glUniform4f(lp1_unif, point_light1.position.x, point_light1.position.y, point_light1.position.z, point_light1.position.w);
 
+		//glUseProgram(block_def->shader);
+		//glUniform4f(lp0_unif, point_light0.position.x, point_light0.position.y, point_light0.position.z, point_light0.position.w);
+		//glUniform4f(lp1_unif, point_light1.position.x, point_light1.position.y, point_light1.position.z, point_light1.position.w);
+		//glUniform4f(lp2_unif, dlpos.x, dlpos.y, dlpos.z, 0);
+
+		/*
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		render_buffer(block_def->rbuf);
-		//render_buffer(font_def->rbuf);
+
+		sprintf(txt, "%0.2f %0.2f %0.2f", dlpos.x, dlpos.y, dlpos.z);
+		int txt_len = (int)strlen(txt);
+		render_advance(font_def);
+		int advance = 0;
+		float tx = txt_x;
+		for (int i=0; i<txt_len; i++) {
+			int ch = txt[i] - 32;
+			int trow = ch / 24;
+			int tcol = ch % 24;
+			int back = font_back[ch];
+			float kern = (((float)font_kern / 8.0f) * font_def->xscale);
+			tx += (((float)advance / 8.0f) * font_def->xscale);
+			tx += kern;
+			if (back < 0) tx += (((float)back / 8.0f) * font_def->xscale);
+			sprite_for(tx, txt_y, 0, trow, tcol, s, font_def);
+			render_sprite(font_def, s);
+			advance = font_space[ch];
+		}
+		*/
+
+		render_buffer(block_def);
+		//render_buffer(font_def);
 		swap_window();
 		frame += 1;
 		if (frame == 60) frame = 0;
 	}
+	free(s);
+	free(boxes);
+	free_render_def(block_def);
+	//free_render_def(font_def);
 }
 
 
@@ -937,13 +978,7 @@ int main(int argc, char *argv[]) {
 	}
 	print_sdl_gl_attributes();
 
-	//run_box();
-	int size;
-	qbox *boxes = load_qubicle_file("/Users/dmk/Desktop/voxel_test/untitled.qb", &size);
-	printf("found %d objects\n", size);
-	for (int i=0; i<size; i++) {
-		printf("(%d,%d,%d) - %d\n", boxes[i].x, boxes[i].y, boxes[i].z, boxes[i].zsize);
-	}
+	run_box();
 
 	cleanup_window();
 

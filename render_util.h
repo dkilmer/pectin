@@ -1,29 +1,12 @@
 #ifndef RENDER_UTIL_H
 #define RENDER_UTIL_H
 
+#include <stdbool.h>
 #include <glad/glad.h>
 
 #if defined __cplusplus
 extern "C" {
 #endif
-
-// a structure that represents a buffer of sprites that get rendered to the screen
-// with a particular shader and spritesheet texture
-typedef struct render_buf {
-	GLenum draw_type;
-	int num_items;
-	int item_size;
-	int array_size;
-	int buf_idx;
-	int num_bufs;
-	int item_idx;
-	GLuint shader;
-	GLuint tex_id;
-	GLuint vao;
-	GLuint vbo;
-	GLfloat *buf;
-	GLsync *fences;
-} render_buf;
 
 // a structure that represents a sprite that is rendered to the screen using
 // geometry shader extrusion, rotation and scaling
@@ -59,14 +42,18 @@ typedef struct line {
 } line;
 
 // a structure to hold the definition for a group of things that will be rendered
-// with a single render_buf. This is used both to load up the shader and to define
-// the geometry of the sprite sheet.
+// with a single render buffer. This is used both to load up the shader and to define
+// the geometry of the sprite sheet, and to hold the buffer and supporting information
+// that will be needed when rendering.
 typedef struct render_def {
 	const char *section_name;
 	const char *shader_type;
 	const char *vert_shader;
 	const char *geom_shader;
 	const char *frag_shader;
+	const char *depth_vert_shader;
+	const char *depth_geom_shader;
+	const char *depth_frag_shader;
 	const char *sprite_sheet;
 	int cols;
 	int rows;
@@ -78,27 +65,49 @@ typedef struct render_def {
 	float layer_xoff;
 	float layer_yoff;
 	int rbuf_size;
-	render_buf *rbuf;
+	bool use_depth;
 	GLuint tex;
 	GLuint shader;
+	GLuint depth_tex;
+	GLuint depth_shader;
+	GLfloat *vp_mat;
+	GLfloat *depth_vp_mat;
+	GLfloat *depth_bias_mat;
+	GLenum draw_type;
+	int num_items;
+	int item_size;
+	int array_size;
+	int buf_idx;
+	int num_bufs;
+	int item_idx;
+	GLuint vao;
+	GLuint vbo;
+	GLfloat *buf;
+	GLsync *fences;
+	GLuint depth_framebuffer;
+	int viewport_w;
+	int viewport_h;
+	int depth_viewport_w;
+	int depth_viewport_h;
 } render_def;
 
-render_def *load_render_def(const char *filename, const char *section, GLfloat *vp_matrix);
+render_def *load_render_def(const char *filename, const char *section, GLfloat *vp_matrix, GLfloat *depth_vp_matrix, GLfloat *depth_bias_matrix);
 GLint load_texture_to_uniform(const char *filename, const char *unif_name, GLuint shaderProgram, GLuint *tex, GLenum tex_num, GLint tex_idx);
-GLuint create_sprite_shader_program(const char *vert_file_name, const char *geom_file_name, const char *frag_file_name,
-                                    const char *tex_file_name, int tex_w, int tex_h, GLfloat *vp_mat, GLuint *tex_id);
-GLuint create_line_shader_program(const char *vert_file_name, const char *geom_file_name, const char *frag_file_name,
-                                    GLfloat *vp_mat, GLfloat line_scale);
+void create_sprite_shader_program(render_def *rd);
+void create_line_shader_program(render_def *rd);
 void free_shader_program(GLuint shader_program);
-void update_view_mat(render_buf *rb, GLfloat *mat);
+GLuint create_depth_buffer(int w, int h, GLuint *depth_map);
+void update_view_mat(render_def *rd, GLfloat *mat);
 void init_render_environment();
-render_buf *create_sprite_render_buf(int max_items, GLuint shader_program, GLuint tex_id);
-render_buf *create_line_render_buf(int max_items, GLuint shader_program);
-void free_render_buf(render_buf *rb);
-void render_sprite(render_buf *rb, sprite *s);
-void render_line(render_buf *rb, line *l);
-void render_buffer(render_buf *rb);
-void render_advance(render_buf *rb);
+void set_sprite_render_attribs(GLuint shader, int item_size);
+void create_sprite_render_buf(render_def *rd);
+void create_line_render_buf(render_def *rd);
+void create_depth_shader_program(render_def *rd);
+void free_render_def(render_def *rd);
+void render_sprite(render_def *rd, sprite *s);
+void render_line(render_def *rd, line *l);
+void render_buffer(render_def *rd);
+void render_advance(render_def *rd);
 
 #ifdef __cplusplus
 }

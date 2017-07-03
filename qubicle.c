@@ -5,8 +5,15 @@
 
 unsigned char get_color(qcolor *matrix, qsize *qs, int x, int y, int z) {
 	if (x<0 || y<0 || z<0) return 0;
-	if (x>=qs->size_x || y>=qs->size_y || z>qs->size_z) return 0;
+	if (x>=qs->size_x || y>=qs->size_y || z>=qs->size_z) return 0;
 	return matrix[(x + (y*qs->size_x) + (z*qs->size_x*qs->size_y))].a;
+}
+
+unsigned char get_thing(qcolor *matrix, qsize *qs, int x, int y, int z) {
+	if (x<0 || y<0 || z<0) return 0;
+	if (x>=qs->size_x || y>=qs->size_y || z>=qs->size_z) return 0;
+	qcolor c = matrix[(x + (y*qs->size_x) + (z*qs->size_x*qs->size_y))];
+	return c.b;
 }
 
 qbox *get_boxes(qcolor *matrix, qsize *qs, int *size) {
@@ -29,13 +36,18 @@ qbox *get_boxes(qcolor *matrix, qsize *qs, int *size) {
 			for (int x = (qs->size_x - 1); x >= 0; x--) {
 				unsigned char c = get_color(matrix, qs, x, y, z);
 				if (c != 0 && get_color(matrix, qs, x, y, z-1) == 0) {
-					boxes[idx].thing = (int)c;
+					unsigned char t = get_thing(matrix, qs, x, y, z);
+					if (t == 141) {
+						boxes[idx].thing = 0;
+					} else {
+						boxes[idx].thing = 1;
+					}
 					boxes[idx].x = x;
 					boxes[idx].y = y;
-					boxes[idx].z = z;
+					boxes[idx].z = -z;
 					boxes[idx].zsize = 1;
 					int zz = z + 1;
-					while (get_color(matrix, qs, x, y, zz) != 0) {
+					while (zz<qs->size_z && get_color(matrix, qs, x, y, zz) != 0) {
 						boxes[idx].zsize += 1;
 						zz++;
 					}
@@ -44,6 +56,7 @@ qbox *get_boxes(qcolor *matrix, qsize *qs, int *size) {
 			}
 		}
 	}
+	return boxes;
 }
 
 qbox *load_qubicle_file(const char *filename, int *size) {
@@ -82,15 +95,20 @@ qbox *load_qubicle_file(const char *filename, int *size) {
 	printf("pos_y: %d\n", qp.pos_y);
 	printf("pos_z: %d\n", qp.pos_z);
 
-	qcolor *m = (qcolor *)malloc(qs.size_x*qs.size_y*qs.size_z);
+	//printf("sizeof(qcolor) is %d\n", sizeof(qcolor));
+	//int bytes_needed = sizeof(qcolor)*qs.size_x*qs.size_y*qs.size_z;
+	//printf("bytes needed: %d\n", bytes_needed);
+	qcolor *m = (qcolor *)malloc(sizeof(qcolor)*qs.size_x*qs.size_y*qs.size_z);
 	for (int z=0; z<qs.size_z; z++) {
 		for (int y=0; y<qs.size_y; y++) {
 			for (int x=(qs.size_x-1); x>=0; x--) {
 				int idx = (x + (y*qs.size_x) + (z*qs.size_x*qs.size_y));
 				fread(&m[idx], sizeof(qcolor), 1, f);
+				/*
 				if (m[idx].a != 0) {
-					//printf("found at (%d,%d,%d): (%d,%d,%d,%d)\n", x, y, z, m[idx].r, m[idx].g, m[idx].b, m[idx].a);
+					printf("found at (%d,%d,%d): (%d,%d,%d,%d)\n", x, y, z, m[idx].r, m[idx].g, m[idx].b, m[idx].a);
 				}
+				*/
 			}
 		}
 	}
