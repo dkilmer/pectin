@@ -5,7 +5,7 @@ layout(triangle_strip, max_vertices = 20) out;
 
 in vec3 Color[];
 in vec3 ScaleRot[];
-in vec3 SprOffset[];
+in uvec3 SprOffset[];
 
 smooth out vec3 FColor;
 out vec2 TexCoord;
@@ -32,12 +32,13 @@ void main() {
     vec3(0.0,        0.0,       1.0)
   );
 
-  float col = mod(SprOffset[0].x, SprOffset[0].z);
-  float row = floor(SprOffset[0].x / SprOffset[0].z);
+  uint col = SprOffset[0].x % SprOffset[0].y;
+  uint row = SprOffset[0].x / SprOffset[0].y;
+  uint adj = SprOffset[0].z;
   float thx = tex_mult.x * 0.25;
   float thy = tex_mult.y * 0.25;
-  float zx = col * tex_mult.x;
-  float zy = row * tex_mult.y;
+  float zx = float(col) * tex_mult.x;
+  float zy = float(row) * tex_mult.y;
 
   vec2 tpa = vec2(zx+thx, zy);
   vec2 tpb = vec2(zx+thx+thx, zy);
@@ -57,38 +58,48 @@ void main() {
 
   FColor = Color[0];
   // bottom
-  norm = vec3(0, -1, 0);
-  emit_point(rotation, pt, vec3(scale_x, -scale_y, 0.0), tpi, norm);
-  emit_point(rotation, pt, vec3(scale_x, -scale_y, -scale_z), tpl, norm);
-  emit_point(rotation, pt, vec3(-scale_x, -scale_y, 0.0), tph, norm);
-  emit_point(rotation, pt, vec3(-scale_x, -scale_y, -scale_z), tpk, norm);
-  EndPrimitive();
+  if ((adj & 0x400u) == 0u) {
+	  norm = vec3(0, -1, 0);
+	  emit_point(rotation, pt, vec3(scale_x, -scale_y, 0.0), tpi, norm);
+	  emit_point(rotation, pt, vec3(scale_x, -scale_y, -scale_z), tpl, norm);
+	  emit_point(rotation, pt, vec3(-scale_x, -scale_y, 0.0), tph, norm);
+	  emit_point(rotation, pt, vec3(-scale_x, -scale_y, -scale_z), tpk, norm);
+	  EndPrimitive();
+  }
   // left
-  norm = vec3(-1, 0, 0);
-  emit_point(rotation, pt, vec3(-scale_x, -scale_y, 0.0), tph, norm);
-  emit_point(rotation, pt, vec3(-scale_x, -scale_y, -scale_z), tpg, norm);
-  emit_point(rotation, pt, vec3(-scale_x, scale_y, 0.0), tpc, norm);
-  emit_point(rotation, pt, vec3(-scale_x, scale_y, -scale_z), tpd, norm);
-  EndPrimitive();
+  if ((adj & 0x1000u) == 0u) {
+	  norm = vec3(-1, 0, 0);
+	  emit_point(rotation, pt, vec3(-scale_x, -scale_y, 0.0), tph, norm);
+	  emit_point(rotation, pt, vec3(-scale_x, -scale_y, -scale_z), tpg, norm);
+	  emit_point(rotation, pt, vec3(-scale_x, scale_y, 0.0), tpc, norm);
+	  emit_point(rotation, pt, vec3(-scale_x, scale_y, -scale_z), tpd, norm);
+	  EndPrimitive();
+	}
   // right
-  norm = vec3(1, 0, 0);
-  emit_point(rotation, pt, vec3(scale_x, scale_y, 0.0), tpe, norm);
-  emit_point(rotation, pt, vec3(scale_x, scale_y, -scale_z), tpf, norm);
-  emit_point(rotation, pt, vec3(scale_x, -scale_y, 0.0), tpi, norm);
-  emit_point(rotation, pt, vec3(scale_x, -scale_y, -scale_z), tpj, norm);
-  EndPrimitive();
+  if ((adj & 0x4000u) == 0u) {
+	  norm = vec3(1, 0, 0);
+	  emit_point(rotation, pt, vec3(scale_x, scale_y, 0.0), tpe, norm);
+	  emit_point(rotation, pt, vec3(scale_x, scale_y, -scale_z), tpf, norm);
+	  emit_point(rotation, pt, vec3(scale_x, -scale_y, 0.0), tpi, norm);
+	  emit_point(rotation, pt, vec3(scale_x, -scale_y, -scale_z), tpj, norm);
+	  EndPrimitive();
+	}
   // top
-  norm = vec3(0, 1, 0);
-  emit_point(rotation, pt, vec3(-scale_x, scale_y, 0.0), tpd, norm);
-  emit_point(rotation, pt, vec3(-scale_x, scale_y, -scale_z), tpa, norm);
-  emit_point(rotation, pt, vec3(scale_x, scale_y, 0.0), tpe, norm);
-  emit_point(rotation, pt, vec3(scale_x, scale_y, -scale_z), tpb, norm);
-  EndPrimitive();
+  if ((adj & 0x10000u) == 0u) {
+	  norm = vec3(0, 1, 0);
+	  emit_point(rotation, pt, vec3(-scale_x, scale_y, 0.0), tpd, norm);
+	  emit_point(rotation, pt, vec3(-scale_x, scale_y, -scale_z), tpa, norm);
+	  emit_point(rotation, pt, vec3(scale_x, scale_y, 0.0), tpe, norm);
+	  emit_point(rotation, pt, vec3(scale_x, scale_y, -scale_z), tpb, norm);
+	  EndPrimitive();
+	}
   // front
-  norm = vec3(0, 0, 1);
-  emit_point(rotation, pt, vec3(-scale_x, -scale_y, 0.0), tph, norm);
-  emit_point(rotation, pt, vec3(-scale_x, scale_y, 0.0), tpd, norm);
-  emit_point(rotation, pt, vec3(scale_x, -scale_y, 0.0), tpi, norm);
-  emit_point(rotation, pt, vec3(scale_x, scale_y, 0.0), tpe, norm);
-  EndPrimitive();
+  if ((adj & 0x10u) == 0u) {
+	  norm = vec3(0, 0, 1);
+	  emit_point(rotation, pt, vec3(-scale_x, -scale_y, 0.0), tph, norm);
+	  emit_point(rotation, pt, vec3(-scale_x, scale_y, 0.0), tpd, norm);
+	  emit_point(rotation, pt, vec3(scale_x, -scale_y, 0.0), tpi, norm);
+	  emit_point(rotation, pt, vec3(scale_x, scale_y, 0.0), tpe, norm);
+	  EndPrimitive();
+	}
 }

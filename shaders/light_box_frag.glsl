@@ -88,8 +88,10 @@ void main() {
 	  float bias = 0.002;
 		float shadow = currentDepth - bias > closestDepth  ? 0.7 : 0.0;
 
-
-    vec3 lighting = (ambient + (1.0 - shadow) * (diffuse + specular)) * color;
+    //vec3 lighting = (ambient + (1.0 - shadow) * (diffuse + specular)) * color;
+    vec3 lighting = ((ambient * FColor) + (1.0 - shadow) * (diffuse + specular)) * color;
+    //vec3 lighting = ((ambient * FColor * 1.2) + (1.0 - shadow) * (diffuse + specular)) * color;
+    //vec3 lighting = (ambient + (1.0 - shadow) * (diffuse + specular)) * color + (FColor / 5.0);
     //vec3 lighting = (ambient * (diffuse + specular)) * color;
 
     outColor = vec4(lighting, 1.0);

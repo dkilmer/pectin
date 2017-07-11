@@ -5,7 +5,7 @@ layout(triangle_strip, max_vertices = 4) out;
 
 in vec3 Color[];
 in vec3 ScaleRot[];
-in vec3 SprOffset[];
+in uvec3 SprOffset[];
 
 smooth out vec3 FColor;
 out vec2 TexCoord;
@@ -33,10 +33,10 @@ void main() {
     vec3(0.0,        0.0,       1.0)
   );
 
-  float col = mod(SprOffset[0].x, SprOffset[0].z);
-  float row = floor(SprOffset[0].x / SprOffset[0].z);
-  float zx = col * tex_mult.x;
-  float zy = row * tex_mult.y;
+  uint col = SprOffset[0].x % SprOffset[0].y;
+  uint row = SprOffset[0].x / SprOffset[0].y;
+  float zx = float(col) * tex_mult.x;
+  float zy = float(row) * tex_mult.y;
   float ox = zx + tex_mult.x;
   float oy = zy + tex_mult.y;
 	vec4 pos;

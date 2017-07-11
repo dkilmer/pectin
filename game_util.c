@@ -12,8 +12,8 @@ void init_screen(screen_def *s, int sw, int sh, int ts, bool ortho) {
 	s->v_units = (float)sh / (float)ts;
 	s->half_w = s->h_units / 2.0f;
 	s->half_h = s->v_units / 2.0f;
-	s->far = 1000.0f;
-	s->fov = 45.0f;
+	s->far = 200.0f;
+	s->fov = 50.0f;
 	s->cam_pos.x = s->half_w;
 	s->cam_pos.y = s->half_h;
 	float rads = (s->fov / 2.0f) * (float)ONE_DEG_IN_RAD;
@@ -40,7 +40,7 @@ mat4_t get_light_mat(screen_def *s, vec3_t light_pos) {
 	//vec3_t cat = {light_pos.x, light_pos.y, light_pos.z};
 	vec3_t cat = {0.0f, 0.0f, 0.0f};
 	vec3_t up = {0.0f, 1.0f, 0.0f};
-	mat4_t p_mat = m4_ortho(-s->half_w * 2.0f, s->half_w * 2.0f, -s->half_h * 2.0f, s->half_h * 2.0f, 1000.0f, 0.1f);
+	mat4_t p_mat = m4_ortho(-s->half_w * 3.0f, s->half_w * 3.0f, -s->half_h * 3.0f, s->half_h * 3.0f, 1000.0f, 0.1f);
 	mat4_t v_mat = m4_look_at(light_pos, cat, up);
 	mat4_t m_mat = m4_identity();
 	return m4_mul(m4_mul(p_mat, v_mat), m_mat);

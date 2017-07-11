@@ -116,12 +116,12 @@ void sprite_for(float x, float y, int layer, int ridx, int cidx, sprite *s, rend
 	s->scale_x = rd->xscale * 0.5f;
 	s->scale_y = rd->yscale * 0.5f;
 	s->rot = 0.0f;
-	s->spr_row = (ridx * rd->cols) + cidx;
-	s->spr_col = 0.0f;
-	s->spr_extra = rd->cols;
+	s->spr_idx = ((ridx * rd->cols) + cidx);
+	s->spr_cols = rd->cols;
+	s->spr_extra = 0;
 }
 
-void sprite_for_box(float x, float y, float z, float zscale, int ridx, int cidx, sprite *s, render_def *rd) {
+void sprite_for_box(float x, float y, float z, float zscale, int ridx, int cidx, unsigned int extra, sprite *s, render_def *rd) {
 	s->x = (x + 0.5f + rd->xoff);
 	s->y = (y + 0.5f + rd->yoff);
 	s->z = z;
@@ -131,9 +131,9 @@ void sprite_for_box(float x, float y, float z, float zscale, int ridx, int cidx,
 	s->scale_x = rd->xscale * 0.5f;
 	s->scale_y = rd->yscale * 0.5f;
 	s->rot = 0.0f;
-	s->spr_row = (ridx * rd->cols) + cidx;
-	s->spr_col = 0.0f;
-	s->spr_extra = rd->cols;
+	s->spr_idx = ((ridx * rd->cols) + cidx);
+	s->spr_cols = rd->cols;
+	s->spr_extra = extra;
 }
 
 void sprite_for_pobj(pobj *p, sprite *s, int layer, render_def *rd) {
@@ -150,9 +150,9 @@ void sprite_for_pobj(pobj *p, sprite *s, int layer, render_def *rd) {
 	//s->scale_x = (CubicEaseInOut(p->scale_norm_x) * 0.3f) + 0.08f;
 	//s->scale_y = (CubicEaseInOut(p->scale_norm_y) * 0.3f) + 0.08f;
 	s->rot = p->rot_norm;
-	s->spr_row = 126.0f;
-	s->spr_col = 0.0f;
-	s->spr_extra = rd->cols;
+	s->spr_idx = 126;
+	s->spr_cols = rd->cols;
+	s->spr_extra = 0;
 }
 
 void sprite_for_boid(boid *b, sprite *s, int layer, render_def *rd) {
@@ -167,9 +167,9 @@ void sprite_for_boid(boid *b, sprite *s, int layer, render_def *rd) {
 	s->scale_x = rd->xscale + ((float)b->frame * 0.02f);
 	s->scale_y = rd->yscale + ((float)b->frame * 0.02f);
 	s->rot = b->ang;
-	s->spr_row = 147 + b->frame;
-	s->spr_col = 0.0f;
-	s->spr_extra = rd->cols;
+	s->spr_idx = (147 + b->frame);
+	s->spr_cols = rd->cols;
+	s->spr_extra = 0;
 }
 
 void randomize_particle(pobj *p) {
@@ -805,7 +805,7 @@ void run_box() {
 	float wmy = 0.0f;
 
 	//vec3_t dlpos = {10.0f, 10.0f, 30.0f};
-	vec3_t dlpos = {40.0f, 50.0f, 60.0f};
+	vec3_t dlpos = {40.0f, 60.0f, 40.0f};
 	// initialize the screen view
 	screen_def sd;
 	init_screen(&sd, SCREEN_W, SCREEN_H, 16, false);
@@ -878,8 +878,11 @@ void run_box() {
 	GLint lp2_unif = glGetUniformLocation(block_def->shader, "all_lights[0].position");
 	printf("lp2_unif is %d\n",lp2_unif);
 
-	int num_boxes;
-	qbox *boxes = load_qubicle_file("/Users/dmk/Desktop/voxel_test/untitled.qb", &num_boxes);
+	//int num_boxes;
+	//qbox *boxes = load_qubicle_boxes("/Users/dmk/Desktop/voxel_test/untitled.qb", &num_boxes);
+	qsize qs;
+	qcolor *boxes = load_qubicle_file("/Users/dmk/Desktop/voxel_test/untitled.qb", &qs);
+	int num_boxes = qs.size_x * qs.size_y * qs.size_z;
 	/*
 	printf("found %d objects\n", num_boxes);
 	for (int i=0; i<num_boxes; i++) {
@@ -903,11 +906,34 @@ void run_box() {
 		}
 	}
 	*/
+	int qcnt = 0;
+	unsigned int qmin = 0xFFFFFFFF;
+	unsigned int qmax = 0;
+	qcolor tc;
+	for (int qz=0; qz<qs.size_z; qz++) {
+		for (int qy=0; qy<qs.size_y; qy++) {
+			for (int qx=0; qx<qs.size_x; qx++) {
+				get_qcolor(boxes, &qs, qx, qy, qz, &tc);
+				if (tc.a == 0) continue;
+				unsigned int surround = get_surround(boxes, &qs, qx, qy, qz);
+				if (surround >= 0x7ffffff) continue;
+				if (surround < qmin) qmin = surround;
+				if (surround > qmax) qmax = surround;
+				int thing = (tc.b == 141) ? 0 : 1;
+				sprite_for_box((float)qx, (float)qy, (float)-qz, 1.0f, 0, thing, surround, s, block_def);
+				render_sprite(block_def, s);
+				qcnt++;
+			}
+		}
+	}
+	printf("rendered %d blocks, min=%ud max=%ud\n",qcnt, qmin, qmax);
+	/*
 	for (int i=0; i<num_boxes; i++) {
 		qbox b = boxes[i];
 		sprite_for_box((float)b.x, (float)b.y, b.z, b.zsize, 0, b.thing, s, block_def);
 		render_sprite(block_def, s);
 	}
+	*/
 
 	clock_gettime(CLOCK_REALTIME, &t1);
 	int frame = 0;
@@ -979,6 +1005,13 @@ int main(int argc, char *argv[]) {
 	print_sdl_gl_attributes();
 
 	run_box();
+
+	/*
+	unsigned int n = 1;
+	for (int i=0; i<27; i++) {
+		printf("sur[%d] = ((adj & 0x%02xu) == 0x%02xu) ? 1u : 0u;\n",i,(n << i),(n << i));
+	}
+	*/
 
 	cleanup_window();
 

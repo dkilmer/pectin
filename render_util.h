@@ -20,9 +20,9 @@ typedef struct sprite {
 	float scale_x;
 	float scale_y;
 	float rot;
-	float spr_row;
-	float spr_col;
-	float spr_extra;
+	int spr_idx;
+	int spr_cols;
+	int spr_extra;
 } sprite;
 
 // a structure that represents a line that is rendered to the screen using
@@ -64,7 +64,6 @@ typedef struct render_def {
 	float yoff;
 	float layer_xoff;
 	float layer_yoff;
-	int rbuf_size;
 	bool use_depth;
 	GLuint tex;
 	GLuint shader;
@@ -77,12 +76,16 @@ typedef struct render_def {
 	int num_items;
 	int item_size;
 	int array_size;
+	int uitem_size;
+	int uarray_size;
 	int buf_idx;
 	int num_bufs;
 	int item_idx;
 	GLuint vao;
 	GLuint vbo;
+	GLuint vbou;
 	GLfloat *buf;
+	GLuint *ubuf;
 	GLsync *fences;
 	GLuint depth_framebuffer;
 	int viewport_w;
@@ -99,7 +102,8 @@ void free_shader_program(GLuint shader_program);
 GLuint create_depth_buffer(int w, int h, GLuint *depth_map);
 void update_view_mat(render_def *rd, GLfloat *mat);
 void init_render_environment();
-void set_sprite_render_attribs(GLuint shader, int item_size);
+void set_sprite_float_render_attribs(GLuint shader, int item_size);
+void set_sprite_uint_render_attribs(GLuint shader, int item_size);
 void create_sprite_render_buf(render_def *rd);
 void create_line_render_buf(render_def *rd);
 void create_depth_shader_program(render_def *rd);

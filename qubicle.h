@@ -43,7 +43,13 @@ typedef struct {
 	int zsize;
 } qbox;
 
-qbox *load_qubicle_file(const char *filename, int *size);
+qcolor *load_qubicle_file(const char *filename, qsize *qs);
+qbox *load_qubicle_boxes(const char *filename, int *size);
+unsigned char get_qalpha(qcolor *matrix, qsize *qs, int x, int y, int z);
+unsigned char get_qthing(qcolor *matrix, qsize *qs, int x, int y, int z);
+void get_qcolor(qcolor *matrix, qsize *qs, int x, int y, int z, qcolor *qc);
+int has_qthing(qcolor *matrix, qsize *qs, int x, int y, int z);
+unsigned int get_surround(qcolor *matrix, qsize *qs, int x, int y, int z);
 
 #ifdef __cplusplus
 }

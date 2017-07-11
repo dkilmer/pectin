@@ -36,8 +36,8 @@ void main() {
     vec3(0.0,        0.0,       1.0)
   );
 
-  float col = mod(SprOffset[0].x, SprOffset[0].z);
-  float row = floor(SprOffset[0].x / SprOffset[0].z);
+  float col = mod(SprOffset[0].x, SprOffset[0].y);
+  float row = floor(SprOffset[0].x / SprOffset[0].y);
   float thx = tex_mult.x * 0.25;
   float thy = tex_mult.y * 0.25;
   float zx = col * tex_mult.x;

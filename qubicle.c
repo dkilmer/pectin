@@ -3,17 +3,55 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-unsigned char get_color(qcolor *matrix, qsize *qs, int x, int y, int z) {
+unsigned char get_qalpha(qcolor *matrix, qsize *qs, int x, int y, int z) {
 	if (x<0 || y<0 || z<0) return 0;
 	if (x>=qs->size_x || y>=qs->size_y || z>=qs->size_z) return 0;
 	return matrix[(x + (y*qs->size_x) + (z*qs->size_x*qs->size_y))].a;
 }
 
-unsigned char get_thing(qcolor *matrix, qsize *qs, int x, int y, int z) {
+unsigned char get_qthing(qcolor *matrix, qsize *qs, int x, int y, int z) {
 	if (x<0 || y<0 || z<0) return 0;
 	if (x>=qs->size_x || y>=qs->size_y || z>=qs->size_z) return 0;
 	qcolor c = matrix[(x + (y*qs->size_x) + (z*qs->size_x*qs->size_y))];
 	return c.b;
+}
+
+void get_qcolor(qcolor *matrix, qsize *qs, int x, int y, int z, qcolor *qc) {
+	if (x<0 || y<0 || z<0 || x>=qs->size_x || y>=qs->size_y || z>=qs->size_z) {
+		qc->r = 0;
+		qc->g = 0;
+		qc->b = 0;
+		qc->a = 0;
+		return;
+	}
+	qcolor c = matrix[(x + (y*qs->size_x) + (z*qs->size_x*qs->size_y))];
+	qc->r = c.r;
+	qc->g = c.g;
+	qc->b = c.b;
+	qc->a = c.a;
+}
+
+int has_qthing(qcolor *matrix, qsize *qs, int x, int y, int z) {
+	if (x<0 || y<0 || z<0 || x>=qs->size_x || y>=qs->size_y || z>=qs->size_z) {
+		return 0;
+	}
+	qcolor c = matrix[(x + (y*qs->size_x) + (z*qs->size_x*qs->size_y))];
+	return (c.a == 0) ? 0 : 1;
+}
+
+
+unsigned int get_surround(qcolor *matrix, qsize *qs, int x, int y, int z) {
+	unsigned int n = 0;
+	int shft = 0;
+	for (int qz=z-1; qz<z+2; qz++) {
+		for (int qy=y-1; qy<y+2; qy++) {
+			for (int qx=x-1; qx<x+2; qx++) {
+				n = n | (has_qthing(matrix, qs, qx, qy, qz) << shft);
+				shft++;
+			}
+		}
+	}
+	return n;
 }
 
 qbox *get_boxes(qcolor *matrix, qsize *qs, int *size) {
@@ -21,8 +59,8 @@ qbox *get_boxes(qcolor *matrix, qsize *qs, int *size) {
 	for (int z=0; z<qs->size_z; z++) {
 		for (int y = 0; y < qs->size_y; y++) {
 			for (int x = (qs->size_x - 1); x >= 0; x--) {
-				unsigned char c = get_color(matrix, qs, x, y, z);
-				if (c != 0 && get_color(matrix, qs, x, y, z - 1) == 0) {
+				unsigned char c = get_qalpha(matrix, qs, x, y, z);
+				if (c != 0 && get_qalpha(matrix, qs, x, y, z - 1) == 0) {
 					cnt++;
 				}
 			}
@@ -34,9 +72,9 @@ qbox *get_boxes(qcolor *matrix, qsize *qs, int *size) {
 	for (int z=0; z<qs->size_z; z++) {
 		for (int y = 0; y < qs->size_y; y++) {
 			for (int x = (qs->size_x - 1); x >= 0; x--) {
-				unsigned char c = get_color(matrix, qs, x, y, z);
-				if (c != 0 && get_color(matrix, qs, x, y, z-1) == 0) {
-					unsigned char t = get_thing(matrix, qs, x, y, z);
+				unsigned char c = get_qalpha(matrix, qs, x, y, z);
+				if (c != 0 && get_qalpha(matrix, qs, x, y, z - 1) == 0) {
+					unsigned char t = get_qthing(matrix, qs, x, y, z);
 					if (t == 141) {
 						boxes[idx].thing = 0;
 					} else {
@@ -47,7 +85,7 @@ qbox *get_boxes(qcolor *matrix, qsize *qs, int *size) {
 					boxes[idx].z = -z;
 					boxes[idx].zsize = 1;
 					int zz = z + 1;
-					while (zz<qs->size_z && get_color(matrix, qs, x, y, zz) != 0) {
+					while (zz<qs->size_z && get_qalpha(matrix, qs, x, y, zz) != 0) {
 						boxes[idx].zsize += 1;
 						zz++;
 					}
@@ -59,7 +97,16 @@ qbox *get_boxes(qcolor *matrix, qsize *qs, int *size) {
 	return boxes;
 }
 
-qbox *load_qubicle_file(const char *filename, int *size) {
+qbox *load_qubicle_boxes(const char *filename, int *size) {
+	qsize qs;
+	qcolor *m = load_qubicle_file(filename, &qs);
+	qbox *boxes = get_boxes(m, &qs, size);
+	free(m);
+	return boxes;
+}
+
+
+qcolor *load_qubicle_file(const char *filename, qsize *qs) {
 	FILE *f = fopen(filename, "rb");
 	if (f == NULL) {
 		printf("failed to open %s\n", filename);
@@ -76,9 +123,8 @@ qbox *load_qubicle_file(const char *filename, int *size) {
 	fread(&name_len, sizeof(char), 1, f);
 	fread(name, (size_t)name_len, 1, f);
 
-	qsize qs;
 	qpos qp;
-	br = fread(&qs, sizeof(qsize), 1, f);
+	br = fread(qs, sizeof(qsize), 1, f);
 	br = fread(&qp, sizeof(qpos), 1, f);
 
 	printf("version: %d\n", qh.version);
@@ -88,9 +134,9 @@ qbox *load_qubicle_file(const char *filename, int *size) {
 	printf("visibility_mask_encoded: %d\n", qh.visibility_mask_encoded);
 	printf("num_matrices: %d\n", qh.num_matrices);
 	printf("name: %s\n", name);
-	printf("size_x: %d\n", qs.size_x);
-	printf("size_y: %d\n", qs.size_y);
-	printf("size_z: %d\n", qs.size_z);
+	printf("size_x: %d\n", qs->size_x);
+	printf("size_y: %d\n", qs->size_y);
+	printf("size_z: %d\n", qs->size_z);
 	printf("pos_x: %d\n", qp.pos_x);
 	printf("pos_y: %d\n", qp.pos_y);
 	printf("pos_z: %d\n", qp.pos_z);
@@ -98,11 +144,11 @@ qbox *load_qubicle_file(const char *filename, int *size) {
 	//printf("sizeof(qcolor) is %d\n", sizeof(qcolor));
 	//int bytes_needed = sizeof(qcolor)*qs.size_x*qs.size_y*qs.size_z;
 	//printf("bytes needed: %d\n", bytes_needed);
-	qcolor *m = (qcolor *)malloc(sizeof(qcolor)*qs.size_x*qs.size_y*qs.size_z);
-	for (int z=0; z<qs.size_z; z++) {
-		for (int y=0; y<qs.size_y; y++) {
-			for (int x=(qs.size_x-1); x>=0; x--) {
-				int idx = (x + (y*qs.size_x) + (z*qs.size_x*qs.size_y));
+	qcolor *m = (qcolor *)malloc(sizeof(qcolor)*qs->size_x*qs->size_y*qs->size_z);
+	for (int z=0; z<qs->size_z; z++) {
+		for (int y=0; y<qs->size_y; y++) {
+			for (int x=(qs->size_x-1); x>=0; x--) {
+				int idx = (x + (y*qs->size_x) + (z*qs->size_x*qs->size_y));
 				fread(&m[idx], sizeof(qcolor), 1, f);
 				/*
 				if (m[idx].a != 0) {
@@ -113,8 +159,6 @@ qbox *load_qubicle_file(const char *filename, int *size) {
 		}
 	}
 	fclose(f);
-	qbox *boxes = get_boxes(m, &qs, size);
-	free(m);
-	return boxes;
+	return m;
 }
 

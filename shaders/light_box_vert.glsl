@@ -3,11 +3,11 @@
 in vec3 color;
 in vec3 scale_rot;
 in vec3 position;
-in vec3 spr_offset;
+in uvec3 spr_offset;
 
 out vec3 Color;
 out vec3 ScaleRot;
-out vec3 SprOffset;
+out uvec3 SprOffset;
 
 uniform mat4 vp;
 uniform mat4 depth_bias_vp;
