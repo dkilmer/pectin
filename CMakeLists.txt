@@ -17,6 +17,7 @@ set(CMAKE_MACOSX_RPATH 1)
 
 include_directories("deps/glad/include/"
         "deps/stb"
+        "deps/portaudio/include/"
         ${SDL2_INCLUDE_DIR}
         ${SDLMIXER_INCLUDE_DIR})
 
@@ -44,8 +45,9 @@ add_executable(${PROJECT_NAME} ${PROJECT_SOURCES}
 set_target_properties(${PROJECT_NAME} PROPERTIES
         LINKER_FLAGS "/ignore:4099")
 
+file(GLOB PORTAUDIO_LIBRARY "deps/portaudio/lib/libportaudio.dylib")
 find_package(SDL2 REQUIRED)
 find_package(SDL2_mixer REQUIRED)
 
 target_link_libraries(${PROJECT_NAME} ${GLAD_LIBRARIES} ${CHIPMUNK_LIBRARIES} ${SDL2_LIBRARY}
-        ${SDLMIXER_LIBRARY})
+        ${SDLMIXER_LIBRARY} ${PORTAUDIO_LIBRARY})
