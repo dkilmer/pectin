@@ -98,6 +98,7 @@ render_def *load_render_def(const char *filename, const char *section, GLfloat *
 GLint load_texture_to_uniform(const char *filename, const char *unif_name, GLuint shaderProgram, GLuint *tex, GLenum tex_num, GLint tex_idx);
 void create_sprite_shader_program(render_def *rd);
 void create_line_shader_program(render_def *rd);
+void create_vector_shader_program(render_def *rd);
 void free_shader_program(GLuint shader_program);
 GLuint create_depth_buffer(int w, int h, GLuint *depth_map);
 void update_view_mat(render_def *rd, GLfloat *mat);

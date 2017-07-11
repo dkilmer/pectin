@@ -1004,7 +1004,7 @@ int main(int argc, char *argv[]) {
 	}
 	print_sdl_gl_attributes();
 
-	run_box();
+	run_throw();
 
 	/*
 	unsigned int n = 1;

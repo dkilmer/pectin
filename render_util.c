@@ -62,6 +62,7 @@ render_def *load_render_def(const char *filename, const char *section, GLfloat *
 	render_def *rd = (render_def *)malloc(sizeof(render_def));
 	rd->section_name = strdup(section);
 	rd->shader = 0;
+	rd->depth_shader = 0;
 	rd->num_items = 0;
 	rd->use_depth = false;
 	if (ini_parse(filename, rdef_handler, rd) < 0) {
@@ -90,6 +91,8 @@ render_def *load_render_def(const char *filename, const char *section, GLfloat *
 		create_sprite_shader_program(rd);
 	} else if (strcmp(rd->shader_type, "line") == 0) {
 		create_line_shader_program(rd);
+	} else if (strcmp(rd->shader_type, "vector") == 0) {
+		create_vector_shader_program(rd);
 	} else if (strcmp(rd->shader_type, "depth") == 0) {
 		create_depth_shader_program(rd);
 	} else {
@@ -222,6 +225,52 @@ GLint bind_texture_to_uniform(const char *unif_name, GLuint shaderProgram, GLuin
 	return texUnif;
 }
 
+GLuint create_shader_program(const char *vert_file_name, const char *frag_file_name, bool depth) {
+	const GLchar* vertex_shader = load_file(vert_file_name);
+	const GLchar* fragment_shader = load_file(frag_file_name);
+
+	GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
+	glShaderSource(vertexShader, 1, &vertex_shader, NULL);
+	glCompileShader(vertexShader);
+	GLint status;
+	glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &status);
+	if (status != GL_TRUE) {
+		char buffer[512];
+		glGetShaderInfoLog(vertexShader, 512, NULL, buffer);
+		printf("ERROR compiling the vertex shader: %s\n",buffer);
+	}
+
+	GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+	glShaderSource(fragmentShader, 1, &fragment_shader, NULL);
+	glCompileShader(fragmentShader);
+	glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &status);
+	if (status != GL_TRUE) {
+		char buffer[512];
+		glGetShaderInfoLog(fragmentShader, 512, NULL, buffer);
+		printf("ERROR compiling the fragment shader: %s\n",buffer);
+	}
+
+	GLuint shaderProgram = glCreateProgram();
+	glAttachShader(shaderProgram, vertexShader);
+	glAttachShader(shaderProgram, fragmentShader);
+	if (!depth) glBindFragDataLocation(shaderProgram, 0, "outColor");
+	glLinkProgram(shaderProgram);
+
+	GLint isLinked = 0;
+	glGetProgramiv(shaderProgram, GL_LINK_STATUS, &isLinked);
+	if(isLinked == GL_FALSE) {
+		printf("ERROR: shader program failed to link\n");
+		GLint maxLength = 0;
+		glGetProgramiv(shaderProgram, GL_INFO_LOG_LENGTH, &maxLength);
+		char buffer[maxLength];
+		glGetProgramInfoLog(shaderProgram, maxLength, &maxLength, buffer);
+		printf("%s\n", buffer);
+	}
+
+	return shaderProgram;
+}
+
+
 GLuint create_geom_shader_program(const char *vert_file_name, const char *geom_file_name, const char *frag_file_name, bool depth) {
 	const GLchar* vertex_shader = load_file(vert_file_name);
 	const GLchar* geom_shader = load_file(geom_file_name);
@@ -340,7 +389,11 @@ void create_sprite_shader_program(render_def *rd) {
 	set_sprite_float_render_attribs(rd->shader, rd->item_size);
 	if (rd->uitem_size > 0) {
 		glBindBuffer(GL_ARRAY_BUFFER, rd->vbou);
-		set_sprite_uint_render_attribs(rd->depth_shader, rd->uitem_size);
+		set_sprite_uint_render_attribs(rd->shader, rd->uitem_size);
+		if (rd->depth_shader > 0) {
+			glUseProgram(rd->depth_shader);
+			set_sprite_uint_render_attribs(rd->depth_shader, rd->uitem_size);
+		}
 	}
 }
 
@@ -351,6 +404,14 @@ void create_line_shader_program(render_def *rd) {
 	glUniformMatrix4fv(viewProjUnif, 1, GL_FALSE, rd->vp_mat);
 	GLint lineScaleUnif = glGetUniformLocation(rd->shader, "scale");
 	glUniform1f(lineScaleUnif, rd->line_scale);
+	create_line_render_buf(rd);
+}
+
+void create_vector_shader_program(render_def *rd) {
+	rd->shader = create_shader_program(rd->vert_shader, rd->frag_shader, false);
+	glUseProgram(rd->shader);
+	GLint viewProjUnif = glGetUniformLocation(rd->shader, "vp");
+	glUniformMatrix4fv(viewProjUnif, 1, GL_FALSE, rd->vp_mat);
 	create_line_render_buf(rd);
 }
 
