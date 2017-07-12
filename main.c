@@ -11,6 +11,8 @@
 #include "boids.h"
 #include "math_3d.h"
 #include "qubicle.h"
+#include "wav.h"
+#include "portaudio.h"
 #include <chipmunk/chipmunk.h>
 
 #define SCREEN_W 1024
@@ -27,6 +29,12 @@
 #define BACK    32
 
 typedef struct timespec timespec;
+
+typedef struct {
+	unsigned int num_samples;
+	unsigned int offset;
+} pb_data;
+int16_t *wav_data;
 
 int *level;
 
@@ -997,7 +1005,36 @@ void run_box() {
 	//free_render_def(font_def);
 }
 
+
+static int pa_callback( const void *inputBuffer, void *outputBuffer,
+                           unsigned long framesPerBuffer,
+                           const PaStreamCallbackTimeInfo* timeInfo,
+                           PaStreamCallbackFlags statusFlags,
+                           void *userData )
+{
+	/* Cast data passed through stream to our structure. */
+	pb_data *meta = (pb_data *)userData;
+	float *out = (float*)outputBuffer;
+	unsigned int i;
+	(void) inputBuffer; /* Prevent unused variable warning. */
+
+	for( i=0; i<framesPerBuffer; i++ )
+	{
+		*out++ = (float)wav_data[meta->offset++] / (float)INT16_MAX;
+		*out++ = (float)wav_data[meta->offset++] / (float)INT16_MAX;
+		if (meta->offset >= meta->num_samples) {
+			meta->offset = 0;
+		}
+	}
+	return 0;
+}
+
 void run_port() {
+	unsigned int num_samples = 0;
+	wav_data = load_wav("/Users/dmk/Data/Untitled.wav", &num_samples);
+	printf("-=-= number of samples is %u\n", num_samples);
+	pb_data port_data = { num_samples, 0 };
+
 	timespec t1, t2;
 	bool loop = true;
 
@@ -1019,6 +1056,20 @@ void run_port() {
 	init_screen(&sd, SCREEN_W, SCREEN_H, 32, true);
 	print_screen_def(&sd);
 
+	PaError paerr = Pa_Initialize();
+	if( paerr != paNoError ) {
+		printf("-=-= PortAudio init error: %s\n", Pa_GetErrorText(paerr));
+	}
+	PaStream *stream;
+	paerr = Pa_OpenDefaultStream( &stream, 0, 2, paFloat32, 44100, 256, pa_callback, &port_data );
+	if( paerr != paNoError ) {
+		printf("-=-= PortAudio open stream error: %s\n", Pa_GetErrorText(paerr));
+	}
+	paerr = Pa_StartStream( stream );
+	if( paerr != paNoError ) {
+		printf("-=-= PortAudio start stream error: %s\n", Pa_GetErrorText(paerr));
+	}
+
 	const char *config_filename = "/Users/dmk/code/pectin/config/port_render_defs.cfg";
 	// set up rendering for lines
 	render_def *line_def = load_render_def(config_filename, "lines", (GLfloat *)&sd.vp_mat, NULL, NULL);
@@ -1026,7 +1077,7 @@ void run_port() {
 	render_def *font_def = load_render_def(config_filename, "font", (GLfloat *)&sd.vp_mat, NULL, NULL);
 
 	line ln = {{16, 8, 0, 0.0f, 0.5f, 0.0f}, {8, 12, 0, 0.0f, 0.5f, 0.0f}};
-	line_box lb = { 10, 10, 12, 8, 0, 0.0f, 0.7f, 0.0f};
+	line_box lb = { 10, 10, 12, 8, 0, 1.0f, 1.0f, 1.0f};
 
 	//const char *txt = "This is an [example] of some {text}. Who knows if it has mojo?";
 	const char *txt = "This is some text that will be on the screen";
@@ -1079,6 +1130,15 @@ void run_port() {
 	free(s);
 	free_render_def(line_def);
 	free_render_def(font_def);
+	paerr = Pa_StopStream( stream );
+	if( paerr != paNoError ) {
+		printf("-=-= PortAudio stop stream error: %s\n", Pa_GetErrorText(paerr));
+	}
+	paerr = Pa_Terminate();
+	if( paerr != paNoError ) {
+		printf("-=-= PortAudio shutdown error: %s\n", Pa_GetErrorText(paerr));
+	}
+	free(wav_data);
 }
 
 
