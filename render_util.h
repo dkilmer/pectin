@@ -41,6 +41,17 @@ typedef struct line {
 	line_point p2;
 } line;
 
+typedef struct line_box {
+	float x1;
+	float y1;
+	float x2;
+	float y2;
+	float z;
+	float r;
+	float g;
+	float b;
+} line_box;
+
 // a structure to hold the definition for a group of things that will be rendered
 // with a single render buffer. This is used both to load up the shader and to define
 // the geometry of the sprite sheet, and to hold the buffer and supporting information
@@ -111,6 +122,7 @@ void create_depth_shader_program(render_def *rd);
 void free_render_def(render_def *rd);
 void render_sprite(render_def *rd, sprite *s);
 void render_line(render_def *rd, line *l);
+void render_line_box(render_def *rd, line_box *l);
 void render_buffer(render_def *rd);
 void render_advance(render_def *rd);
 

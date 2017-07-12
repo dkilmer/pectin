@@ -645,6 +645,69 @@ void render_line(render_def *rd, line *l) {
 	rd->item_idx+=2;
 }
 
+void render_line_box(render_def *rd, line_box *l) {
+	if (init_render(rd) < 0) return;
+	int idx = rd->item_idx * rd->item_size;
+	rd->buf[idx++] = l->x1;
+	rd->buf[idx++] = l->y1;
+	rd->buf[idx++] = l->z;
+	rd->buf[idx++] = l->r;
+	rd->buf[idx++] = l->g;
+	rd->buf[idx++] = l->b;
+
+	rd->buf[idx++] = l->x2;
+	rd->buf[idx++] = l->y1;
+	rd->buf[idx++] = l->z;
+	rd->buf[idx++] = l->r;
+	rd->buf[idx++] = l->g;
+	rd->buf[idx++] = l->b;
+
+	rd->buf[idx++] = l->x1;
+	rd->buf[idx++] = l->y2;
+	rd->buf[idx++] = l->z;
+	rd->buf[idx++] = l->r;
+	rd->buf[idx++] = l->g;
+	rd->buf[idx++] = l->b;
+
+	rd->buf[idx++] = l->x2;
+	rd->buf[idx++] = l->y2;
+	rd->buf[idx++] = l->z;
+	rd->buf[idx++] = l->r;
+	rd->buf[idx++] = l->g;
+	rd->buf[idx++] = l->b;
+
+	rd->buf[idx++] = l->x1;
+	rd->buf[idx++] = l->y1;
+	rd->buf[idx++] = l->z;
+	rd->buf[idx++] = l->r;
+	rd->buf[idx++] = l->g;
+	rd->buf[idx++] = l->b;
+
+	rd->buf[idx++] = l->x1;
+	rd->buf[idx++] = l->y2;
+	rd->buf[idx++] = l->z;
+	rd->buf[idx++] = l->r;
+	rd->buf[idx++] = l->g;
+	rd->buf[idx++] = l->b;
+
+	rd->buf[idx++] = l->x2;
+	rd->buf[idx++] = l->y1;
+	rd->buf[idx++] = l->z;
+	rd->buf[idx++] = l->r;
+	rd->buf[idx++] = l->g;
+	rd->buf[idx++] = l->b;
+
+	rd->buf[idx++] = l->x2;
+	rd->buf[idx++] = l->y2;
+	rd->buf[idx++] = l->z;
+	rd->buf[idx++] = l->r;
+	rd->buf[idx++] = l->g;
+	rd->buf[idx++] = l->b;
+
+	rd->item_idx+=8;
+}
+
+
 void render_buffer_normal(render_def *rd) {
 	if (rd->tex > 0) {
 		//glActiveTexture(GL_TEXTURE0);

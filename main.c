@@ -997,6 +997,90 @@ void run_box() {
 	//free_render_def(font_def);
 }
 
+void run_port() {
+	timespec t1, t2;
+	bool loop = true;
+
+	// keyboard event variables
+	bool kdown[NUM_KEYS];
+	bool kpress[NUM_KEYS];
+	for (int i=0; i<NUM_KEYS; i++) {
+		kdown[i] = false;
+		kpress[i] = false;
+	}
+	int key_map[NUM_KEYS];
+	set_default_key_map(key_map);
+	mouse_input mouse;
+	float wmx = 0.0f;
+	float wmy = 0.0f;
+
+	// initialize the screen view
+	screen_def sd;
+	init_screen(&sd, SCREEN_W, SCREEN_H, 32, true);
+	print_screen_def(&sd);
+
+	const char *config_filename = "/Users/dmk/code/pectin/config/port_render_defs.cfg";
+	// set up rendering for lines
+	render_def *line_def = load_render_def(config_filename, "lines", (GLfloat *)&sd.vp_mat, NULL, NULL);
+	// set up rendering for font
+	render_def *font_def = load_render_def(config_filename, "font", (GLfloat *)&sd.vp_mat, NULL, NULL);
+
+	line ln = {{16, 8, 0, 0.0f, 0.5f, 0.0f}, {8, 12, 0, 0.0f, 0.5f, 0.0f}};
+	line_box lb = { 10, 10, 12, 8, 0, 0.0f, 0.7f, 0.0f};
+
+	//const char *txt = "This is an [example] of some {text}. Who knows if it has mojo?";
+	const char *txt = "This is some text that will be on the screen";
+	float txt_x = 1.0f;
+	float txt_y = 18.0f;
+	int txt_len = (int)strlen(txt);
+
+	printf("sizeof(line) is %d\n", (int)sizeof(line));
+	line *project = (line *)malloc(20 * sizeof(line));
+
+	sprite *s = (sprite *)malloc(sizeof(sprite));
+	init_render_environment();
+
+	int advance = 0;
+	float tx = txt_x;
+	for (int i=0; i<txt_len; i++) {
+		int ch = txt[i] - 32;
+		int trow = ch / 24;
+		int tcol = ch % 24;
+		int back = font_back[ch];
+		float kern = (((float)font_kern / 8.0f) * font_def->xscale);
+		tx += (((float)advance / 8.0f) * font_def->xscale);
+		tx += kern;
+		if (back < 0) tx += (((float)back / 8.0f) * font_def->xscale);
+		sprite_for(tx, txt_y, 0, trow, tcol, s, font_def);
+		render_sprite(font_def, s);
+		advance = font_space[ch];
+	}
+	clock_gettime(CLOCK_REALTIME, &t1);
+	int frame = 0;
+	while (loop) {
+		get_input(kdown, kpress, key_map, &mouse);
+		if (kpress[KEY_QUIT]) {
+			loop = false;
+		}
+		clock_gettime(CLOCK_REALTIME, &t2);
+		double dt = time_diff_d(t1, t2);
+
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+		render_advance(line_def);
+		render_line_box(line_def, &lb);
+
+		render_buffer(line_def);
+		render_buffer(font_def);
+		swap_window();
+		frame += 1;
+		if (frame == 60) frame = 0;
+	}
+	free(s);
+	free_render_def(line_def);
+	free_render_def(font_def);
+}
+
 
 int main(int argc, char *argv[]) {
 	if (!init_window("test sdl_ogl", SCREEN_W, SCREEN_H)) {
@@ -1004,7 +1088,7 @@ int main(int argc, char *argv[]) {
 	}
 	print_sdl_gl_attributes();
 
-	run_throw();
+	run_port();
 
 	/*
 	unsigned int n = 1;
