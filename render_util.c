@@ -93,6 +93,10 @@ render_def *load_render_def(const char *filename, const char *section, GLfloat *
 		create_line_shader_program(rd);
 	} else if (strcmp(rd->shader_type, "vector") == 0) {
 		create_vector_shader_program(rd);
+	} else if (strcmp(rd->shader_type, "vbox") == 0) {
+		create_vbox_shader_program(rd);
+	} else if (strcmp(rd->shader_type, "rect") == 0) {
+		create_rect_shader_program(rd);
 	} else if (strcmp(rd->shader_type, "depth") == 0) {
 		create_depth_shader_program(rd);
 	} else {
@@ -104,8 +108,28 @@ render_def *load_render_def(const char *filename, const char *section, GLfloat *
 GLuint create_depth_map(int w, int h) {
 	GLuint depth_map;
 	glGenTextures(1, &depth_map);
-	glBindTexture(GL_TEXTURE_2D, depth_map);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, depth_map);
+	for (unsigned int i = 0; i < 6; ++i) {
+		glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_DEPTH_COMPONENT,
+		             w, h, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+		GLenum err = glGetError();
+		if (err != GL_NO_ERROR) {
+			printf("-=-= ERROR bind framebuffer: %d\n", err);
+		}
+	}
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+	//glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_COMPARE_FUNC, GL_EQUAL);
+	//glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
+	GLenum err = glGetError();
+	if (err != GL_NO_ERROR) {
+		printf("-=-= ERROR bind framebuffer: %d\n", err);
+	}
 	/*
+	glBindTexture(GL_TEXTURE_2D, depth_map);
 	glTexImage2D(GL_TEXTURE_2D, 0,GL_DEPTH_COMPONENT16, w, h, 0, GL_DEPTH_COMPONENT, GL_FLOAT, 0);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
@@ -114,12 +138,17 @@ GLuint create_depth_map(int w, int h) {
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_R_TO_TEXTURE);
 	*/
+	/*
+	glBindTexture(GL_TEXTURE_2D, depth_map);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT,
-	             w, h, 0, GL_DEPTH_COMPONENT, GL_INT, NULL);
+	             w, h, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+	//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_FUNC, GL_LESS);
+	//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
+	*/
 	return depth_map;
 }
 
@@ -129,13 +158,18 @@ GLuint create_depth_buffer(int w, int h, GLuint *depth_map) {
 	*depth_map = create_depth_map(w, h);
 
 	glBindFramebuffer(GL_FRAMEBUFFER, depth_framebuffer);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D ,*depth_map, 0);
+	//glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D ,*depth_map, 0);
+	glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, *depth_map, 0);
 	glDrawBuffer(GL_NONE);
 	glReadBuffer(GL_NONE);
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-	if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
 		printf("-=-= ERROR: creating depth framebuffer failed\n");
 	}
+	GLenum err = glGetError();
+	if (err != GL_NO_ERROR) {
+		printf("-=-= ERROR bind framebuffer: %d\n", err);
+	}
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	return depth_framebuffer;
 }
 
@@ -169,27 +203,27 @@ GLint load_texture_to_uniform(const char *filename, const char *unif_name, GLuin
 	if (err != GL_NO_ERROR) {
 		printf("-=-= ERROR 4: %d\n", err);
 	}
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_MIRROR_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	err = glGetError();
 	if (err != GL_NO_ERROR) {
 		printf("-=-= ERROR 5.1: %d\n", err);
 	}
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_MIRROR_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	err = glGetError();
 	if (err != GL_NO_ERROR) {
 		printf("-=-= ERROR 5.2: %d\n", err);
 	}
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_MIRROR_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
 	err = glGetError();
 	if (err != GL_NO_ERROR) {
 		printf("-=-= ERROR 5.2: %d\n", err);
 	}
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	err = glGetError();
 	if (err != GL_NO_ERROR) {
 		printf("-=-= ERROR 5.3: %d\n", err);
 	}
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	err = glGetError();
 	if (err != GL_NO_ERROR) {
 		printf("-=-= ERROR 5.4: %d\n", err);
@@ -220,6 +254,16 @@ GLint bind_texture_to_uniform(const char *unif_name, GLuint shaderProgram, GLuin
 	GLint texUnif;
 	glActiveTexture(tex_num);
 	glBindTexture(GL_TEXTURE_2D, *tex);
+	texUnif = glGetUniformLocation(shaderProgram, unif_name);
+	glUniform1i(texUnif, tex_idx);
+	return texUnif;
+}
+
+GLint bind_depth_cube_texture_to_uniform(const char *unif_name, GLuint shaderProgram, GLuint *tex, GLenum tex_num, GLint tex_idx) {
+	//glUseProgram(shaderProgram);
+	GLint texUnif;
+	glActiveTexture(tex_num);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, *tex);
 	texUnif = glGetUniformLocation(shaderProgram, unif_name);
 	glUniform1i(texUnif, tex_idx);
 	return texUnif;
@@ -334,27 +378,36 @@ void create_depth_shader_program(render_def *rd) {
 
 	glBindFramebuffer(GL_FRAMEBUFFER, rd->depth_framebuffer);
 	rd->depth_shader = create_geom_shader_program(rd->depth_vert_shader, rd->depth_geom_shader, rd->depth_frag_shader, true);
-	glUseProgram(rd->depth_shader);
-	GLint depthViewProjUnif = glGetUniformLocation(rd->depth_shader, "depth_vp");
-	glUniformMatrix4fv(depthViewProjUnif, 1, GL_FALSE, rd->depth_vp_mat);
-	GLint depthTexMultUnif = glGetUniformLocation(rd->depth_shader, "tex_mult");
-	float dmx = 1.0f / (float)rd->cols;
-	float dmy = 1.0f / (float)rd->rows;
-	glUniform2f(depthTexMultUnif, dmx, dmy);
+	//glUseProgram(rd->depth_shader);
+	//GLint depthViewProjUnif = glGetUniformLocation(rd->depth_shader, "depth_vp");
+	//printf("depthViewProjUnif in depth shader is %d\n", depthViewProjUnif);
+	//glUniformMatrix4fv(depthViewProjUnif, 1, GL_FALSE, rd->depth_vp_mat);
+	//rd->d_depth_vp_unif = depthViewProjUnif;
+	//GLint depthTexMultUnif = glGetUniformLocation(rd->depth_shader, "tex_mult");
+	//float dmx = 1.0f / (float)rd->cols;
+	//float dmy = 1.0f / (float)rd->rows;
+	//glUniform2f(depthTexMultUnif, dmx, dmy);
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	rd->shader = create_geom_shader_program(rd->vert_shader, rd->geom_shader, rd->frag_shader, false);
 	glUseProgram(rd->shader);
 	GLint viewProjUnif = glGetUniformLocation(rd->shader, "vp");
 	glUniformMatrix4fv(viewProjUnif, 1, GL_FALSE, rd->vp_mat);
-	GLint depthBiasUnif = glGetUniformLocation(rd->shader, "depth_bias_vp");
-	glUniformMatrix4fv(depthBiasUnif, 1, GL_FALSE, rd->depth_vp_mat);
+	rd->vp_unif = viewProjUnif;
+	//GLint depthBiasUnif = glGetUniformLocation(rd->shader, "depth_bias_vp");
+	//glUniformMatrix4fv(depthBiasUnif, 1, GL_FALSE, rd->depth_vp_mat);
+	//GLint depthVpUnif = glGetUniformLocation(rd->shader, "depth_vp");
+	//glUniformMatrix4fv(depthVpUnif, 1, GL_FALSE, rd->depth_vp_mat);
+	//rd->depth_vp_unif = depthVpUnif;
+	//printf("depthVpUnif in normal shader is %d\n", depthVpUnif);
+
 	GLint texMultUnif = glGetUniformLocation(rd->shader, "tex_mult");
 	float mx = 1.0f / (float)rd->cols;
 	float my = 1.0f / (float)rd->rows;
 	glUniform2f(texMultUnif, mx, my);
+	rd->tex_mult_unif = texMultUnif;
 	GLint texUnif = load_texture_to_uniform(rd->sprite_sheet, "tex", rd->shader, &rd->tex, GL_TEXTURE0, 0);
-	GLint depthTexUnif = bind_texture_to_uniform("shadow_map", rd->shader, &rd->depth_tex, GL_TEXTURE1, 1);
+	GLint depthTexUnif = bind_depth_cube_texture_to_uniform("shadow_map", rd->shader, &rd->depth_tex, GL_TEXTURE1, 1);
 	create_sprite_render_buf(rd);
 	glBindBuffer(GL_ARRAY_BUFFER, rd->vbo);
 	set_sprite_float_render_attribs(rd->depth_shader, rd->item_size);
@@ -373,15 +426,34 @@ void create_depth_shader_program(render_def *rd) {
 	}
 }
 
+void copy_depth(render_def *rd_src, render_def *rd_dst) {
+	rd_dst->use_depth = true;
+	rd_dst->depth_viewport_w = rd_src->depth_viewport_w;
+	rd_dst->depth_viewport_h = rd_src->depth_viewport_h;
+	rd_dst->depth_framebuffer = rd_src->depth_framebuffer;
+	glBindFramebuffer(GL_FRAMEBUFFER, rd_dst->depth_framebuffer);
+	rd_dst->depth_tex = rd_src->depth_tex;
+	rd_dst->depth_shader = create_geom_shader_program(rd_dst->depth_vert_shader, rd_dst->depth_geom_shader, rd_dst->depth_frag_shader, true);
+	glUseProgram(rd_dst->depth_shader);
+	glBindBuffer(GL_ARRAY_BUFFER, rd_dst->vbo);
+	set_sprite_float_render_attribs(rd_dst->depth_shader, rd_dst->item_size);
+	if (rd_dst->uitem_size > 0) {
+		glBindBuffer(GL_ARRAY_BUFFER, rd_dst->vbou);
+		set_sprite_uint_render_attribs(rd_dst->depth_shader, rd_dst->uitem_size);
+	}
+}
+
 void create_sprite_shader_program(render_def *rd) {
 	rd->shader = create_geom_shader_program(rd->vert_shader, rd->geom_shader, rd->frag_shader, false);
 	glUseProgram(rd->shader);
 	GLint viewProjUnif = glGetUniformLocation(rd->shader, "vp");
 	glUniformMatrix4fv(viewProjUnif, 1, GL_FALSE, rd->vp_mat);
+	rd->vp_unif = viewProjUnif;
 	GLint texMultUnif = glGetUniformLocation(rd->shader, "tex_mult");
 	float mx = 1.0f / (float)rd->cols;
 	float my = 1.0f / (float)rd->rows;
 	glUniform2f(texMultUnif, mx, my);
+	rd->tex_mult_unif = texMultUnif;
 	GLint texUnif = load_texture_to_uniform(rd->sprite_sheet, "tex", rd->shader, &rd->tex, GL_TEXTURE0, 0);
 	create_sprite_render_buf(rd);
 	glBindVertexArray(rd->vao);
@@ -402,6 +474,7 @@ void create_line_shader_program(render_def *rd) {
 	glUseProgram(rd->shader);
 	GLint viewProjUnif = glGetUniformLocation(rd->shader, "vp");
 	glUniformMatrix4fv(viewProjUnif, 1, GL_FALSE, rd->vp_mat);
+	rd->vp_unif = viewProjUnif;
 	GLint lineScaleUnif = glGetUniformLocation(rd->shader, "scale");
 	glUniform1f(lineScaleUnif, rd->line_scale);
 	create_line_render_buf(rd);
@@ -412,13 +485,31 @@ void create_vector_shader_program(render_def *rd) {
 	glUseProgram(rd->shader);
 	GLint viewProjUnif = glGetUniformLocation(rd->shader, "vp");
 	glUniformMatrix4fv(viewProjUnif, 1, GL_FALSE, rd->vp_mat);
+	rd->vp_unif = viewProjUnif;
 	create_line_render_buf(rd);
 }
 
-void update_view_mat(render_def *rd, GLfloat *mat) {
+void create_vbox_shader_program(render_def *rd) {
+	rd->shader = create_geom_shader_program(rd->vert_shader, rd->geom_shader ,rd->frag_shader, false);
 	glUseProgram(rd->shader);
 	GLint viewProjUnif = glGetUniformLocation(rd->shader, "vp");
-	glUniformMatrix4fv(viewProjUnif, 1, GL_FALSE, mat);
+	glUniformMatrix4fv(viewProjUnif, 1, GL_FALSE, rd->vp_mat);
+	rd->vp_unif = viewProjUnif;
+	create_line_render_buf(rd);
+}
+
+void create_rect_shader_program(render_def *rd) {
+	rd->shader = create_shader_program(rd->vert_shader, rd->frag_shader, false);
+	glUseProgram(rd->shader);
+	GLint viewProjUnif = glGetUniformLocation(rd->shader, "vp");
+	glUniformMatrix4fv(viewProjUnif, 1, GL_FALSE, rd->vp_mat);
+	rd->vp_unif = viewProjUnif;
+	create_line_render_buf(rd);
+	rd->draw_type = GL_TRIANGLE_STRIP;
+}
+
+void update_view_mat(render_def *rd, GLfloat *mat) {
+	glUniformMatrix4fv(rd->vp_unif, 1, GL_FALSE, mat);
 }
 
 void free_shader_program(GLuint shader_program) {
@@ -427,14 +518,15 @@ void free_shader_program(GLuint shader_program) {
 
 void init_render_environment() {
 	glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
+	//glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_LESS);
 	//glFrontFace(GL_CW);
 	glEnable(GL_CULL_FACE);
 	glCullFace(GL_FRONT);
 	glDisable(GL_CLIP_PLANE0);
-	//glEnable(GL_BLEND);
-	//glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 }
 
 void set_sprite_float_render_attribs(GLuint shader, int item_size) {
@@ -647,6 +739,7 @@ void render_line(render_def *rd, line *l) {
 
 void render_line_box(render_def *rd, line_box *l) {
 	if (init_render(rd) < 0) return;
+	rd->draw_type = GL_LINE_LOOP;
 	int idx = rd->item_idx * rd->item_size;
 	rd->buf[idx++] = l->x1;
 	rd->buf[idx++] = l->y1;
@@ -655,13 +748,6 @@ void render_line_box(render_def *rd, line_box *l) {
 	rd->buf[idx++] = l->g;
 	rd->buf[idx++] = l->b;
 
-	rd->buf[idx++] = l->x2;
-	rd->buf[idx++] = l->y1;
-	rd->buf[idx++] = l->z;
-	rd->buf[idx++] = l->r;
-	rd->buf[idx++] = l->g;
-	rd->buf[idx++] = l->b;
-
 	rd->buf[idx++] = l->x1;
 	rd->buf[idx++] = l->y2;
 	rd->buf[idx++] = l->z;
@@ -676,45 +762,147 @@ void render_line_box(render_def *rd, line_box *l) {
 	rd->buf[idx++] = l->g;
 	rd->buf[idx++] = l->b;
 
-	rd->buf[idx++] = l->x1;
-	rd->buf[idx++] = l->y1;
-	rd->buf[idx++] = l->z;
-	rd->buf[idx++] = l->r;
-	rd->buf[idx++] = l->g;
-	rd->buf[idx++] = l->b;
-
-	rd->buf[idx++] = l->x1;
-	rd->buf[idx++] = l->y2;
-	rd->buf[idx++] = l->z;
-	rd->buf[idx++] = l->r;
-	rd->buf[idx++] = l->g;
-	rd->buf[idx++] = l->b;
-
 	rd->buf[idx++] = l->x2;
 	rd->buf[idx++] = l->y1;
 	rd->buf[idx++] = l->z;
 	rd->buf[idx++] = l->r;
 	rd->buf[idx++] = l->g;
-	rd->buf[idx++] = l->b;
+	rd->buf[idx] = l->b;
 
-	rd->buf[idx++] = l->x2;
-	rd->buf[idx++] = l->y2;
-	rd->buf[idx++] = l->z;
-	rd->buf[idx++] = l->r;
-	rd->buf[idx++] = l->g;
-	rd->buf[idx++] = l->b;
-
-	rd->item_idx+=8;
+	rd->item_idx+=4;
 }
 
+void render_rect_box(render_def *rd, line_box *l) {
+	if (init_render(rd) < 0) return;
+	rd->draw_type = GL_TRIANGLES;
+	int idx = rd->item_idx * rd->item_size;
+	rd->buf[idx++] = l->x1;
+	rd->buf[idx++] = l->y1;
+	rd->buf[idx++] = l->z;
+	rd->buf[idx++] = l->r;
+	rd->buf[idx++] = l->g;
+	rd->buf[idx++] = l->b;
 
-void render_buffer_normal(render_def *rd) {
-	if (rd->tex > 0) {
-		//glActiveTexture(GL_TEXTURE0);
+	rd->buf[idx++] = l->x1;
+	rd->buf[idx++] = l->y2;
+	rd->buf[idx++] = l->z;
+	rd->buf[idx++] = l->r;
+	rd->buf[idx++] = l->g;
+	rd->buf[idx++] = l->b;
+
+	rd->buf[idx++] = l->x2;
+	rd->buf[idx++] = l->y1;
+	rd->buf[idx++] = l->z;
+	rd->buf[idx++] = l->r;
+	rd->buf[idx++] = l->g;
+	rd->buf[idx++] = l->b;
+
+	rd->buf[idx++] = l->x2;
+	rd->buf[idx++] = l->y1;
+	rd->buf[idx++] = l->z;
+	rd->buf[idx++] = l->r;
+	rd->buf[idx++] = l->g;
+	rd->buf[idx++] = l->b;
+
+	rd->buf[idx++] = l->x1;
+	rd->buf[idx++] = l->y2;
+	rd->buf[idx++] = l->z;
+	rd->buf[idx++] = l->r;
+	rd->buf[idx++] = l->g;
+	rd->buf[idx++] = l->b;
+
+	rd->buf[idx++] = l->x2;
+	rd->buf[idx++] = l->y2;
+	rd->buf[idx++] = l->z;
+	rd->buf[idx++] = l->r;
+	rd->buf[idx++] = l->g;
+	rd->buf[idx] = l->b;
+
+	rd->item_idx+=6;
+	/*
+	rd->draw_type = GL_TRIANGLE_STRIP;
+	int idx = rd->item_idx * rd->item_size;
+	rd->buf[idx++] = l->x1;
+	rd->buf[idx++] = l->y1;
+	rd->buf[idx++] = l->z;
+	rd->buf[idx++] = l->r;
+	rd->buf[idx++] = l->g;
+	rd->buf[idx++] = l->b;
+
+	rd->buf[idx++] = l->x1;
+	rd->buf[idx++] = l->y2;
+	rd->buf[idx++] = l->z;
+	rd->buf[idx++] = l->r;
+	rd->buf[idx++] = l->g;
+	rd->buf[idx++] = l->b;
+
+	rd->buf[idx++] = l->x2;
+	rd->buf[idx++] = l->y1;
+	rd->buf[idx++] = l->z;
+	rd->buf[idx++] = l->r;
+	rd->buf[idx++] = l->g;
+	rd->buf[idx++] = l->b;
+
+	rd->buf[idx++] = l->x2;
+	rd->buf[idx++] = l->y2;
+	rd->buf[idx++] = l->z;
+	rd->buf[idx++] = l->r;
+	rd->buf[idx++] = l->g;
+	rd->buf[idx] = l->b;
+
+	rd->item_idx+=4;
+	*/
+}
+
+void render_start_depth_pass(render_def *rd) {
+	glViewport(0, 0, rd->depth_viewport_w, rd->depth_viewport_h);
+	glBindFramebuffer(GL_FRAMEBUFFER, rd->depth_framebuffer);
+	glClear(GL_DEPTH_BUFFER_BIT);
+}
+
+void render_start_screen_pass(render_def *rd) {
+	glViewport(0, 0, rd->viewport_w, rd->viewport_h);
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+}
+
+void render_depth_render_only(render_def *rd, bool use_tex) {
+	glUseProgram(rd->depth_shader);
+	if (use_tex && rd->tex > 0) {
+		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, rd->tex);
 	}
 	glBindVertexArray(rd->vao);
+	if (rd->item_idx > 0) {
+		glDrawArrays(rd->draw_type, rd->buf_idx * rd->num_items, rd->item_idx);
+	}
+}
+
+void render_screen_render_only(render_def *rd) {
 	glUseProgram(rd->shader);
+	if (rd->tex > 0) {
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, rd->tex);
+	}
+	if (rd->use_depth && rd->depth_tex > 0) {
+		glActiveTexture(GL_TEXTURE1);
+		glBindTexture(GL_TEXTURE_CUBE_MAP, rd->depth_tex);
+	}
+	glBindVertexArray(rd->vao);
+	if (rd->item_idx > 0) {
+		glDrawArrays(rd->draw_type, rd->buf_idx * rd->num_items, rd->item_idx);
+	}
+}
+
+void render_buffer_normal(render_def *rd) {
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	//glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	glUseProgram(rd->shader);
+	glBindVertexArray(rd->vao);
+	if (rd->tex > 0) {
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, rd->tex);
+	}
 	if (rd->item_idx > 0) {
 		glDrawArrays(rd->draw_type, rd->buf_idx * rd->num_items, rd->item_idx);
 	}
@@ -725,8 +913,8 @@ void render_buffer_depth(render_def *rd) {
 	glBindFramebuffer(GL_FRAMEBUFFER, rd->depth_framebuffer);
 	glClear(GL_DEPTH_BUFFER_BIT);
 	glUseProgram(rd->depth_shader);
-	GLint depthViewProjUnif = glGetUniformLocation(rd->depth_shader, "depth_vp");
-	glUniformMatrix4fv(depthViewProjUnif, 1, GL_FALSE, rd->depth_vp_mat);
+	//GLint depthViewProjUnif = glGetUniformLocation(rd->depth_shader, "depth_vp");
+	//glUniformMatrix4fv(depthViewProjUnif, 1, GL_FALSE, rd->depth_vp_mat);
 
 	glBindVertexArray(rd->vao);
 	if (rd->item_idx > 0) {
@@ -737,15 +925,15 @@ void render_buffer_depth(render_def *rd) {
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glUseProgram(rd->shader);
-	GLint depthBiasUnif = glGetUniformLocation(rd->shader, "depth_bias_vp");
-	glUniformMatrix4fv(depthBiasUnif, 1, GL_FALSE, rd->depth_vp_mat);
-	GLint viewProjUnif = glGetUniformLocation(rd->shader, "vp");
-	glUniformMatrix4fv(viewProjUnif, 1, GL_FALSE, rd->vp_mat);
+	//GLint depthBiasUnif = glGetUniformLocation(rd->shader, "depth_vp");
+	//glUniformMatrix4fv(depthBiasUnif, 1, GL_FALSE, rd->depth_vp_mat);
+	//GLint viewProjUnif = glGetUniformLocation(rd->shader, "vp");
+	//glUniformMatrix4fv(viewProjUnif, 1, GL_FALSE, rd->vp_mat);
 
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, rd->tex);
 	glActiveTexture(GL_TEXTURE1);
-	glBindTexture(GL_TEXTURE_2D, rd->depth_tex);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, rd->depth_tex);
 
 	glBindVertexArray(rd->vao);
 	if (rd->item_idx > 0) {

@@ -103,6 +103,19 @@ typedef struct render_def {
 	int viewport_h;
 	int depth_viewport_w;
 	int depth_viewport_h;
+	GLint vp_unif;
+	GLint depth_vp_unif;
+	GLint depth_vps_unif[6];
+	GLint light_pos_unif;
+	GLint far_plane_unif;
+	GLint num_lights_unif;
+	GLint tex_mult_unif;
+	GLint camera_pos_unif;
+	GLint bias_unif;
+	GLint d_depth_vp_unif;
+	GLint d_depth_vps_unif[6];
+	GLint d_light_pos_unif;
+	GLint d_far_plane_unif;
 } render_def;
 
 render_def *load_render_def(const char *filename, const char *section, GLfloat *vp_matrix, GLfloat *depth_vp_matrix, GLfloat *depth_bias_matrix);
@@ -110,6 +123,8 @@ GLint load_texture_to_uniform(const char *filename, const char *unif_name, GLuin
 void create_sprite_shader_program(render_def *rd);
 void create_line_shader_program(render_def *rd);
 void create_vector_shader_program(render_def *rd);
+void create_vbox_shader_program(render_def *rd);
+void create_rect_shader_program(render_def *rd);
 void free_shader_program(GLuint shader_program);
 GLuint create_depth_buffer(int w, int h, GLuint *depth_map);
 void update_view_mat(render_def *rd, GLfloat *mat);
@@ -119,12 +134,20 @@ void set_sprite_uint_render_attribs(GLuint shader, int item_size);
 void create_sprite_render_buf(render_def *rd);
 void create_line_render_buf(render_def *rd);
 void create_depth_shader_program(render_def *rd);
+void copy_depth(render_def *rd_src, render_def *rd_dst);
 void free_render_def(render_def *rd);
 void render_sprite(render_def *rd, sprite *s);
 void render_line(render_def *rd, line *l);
 void render_line_box(render_def *rd, line_box *l);
+void render_rect_box(render_def *rd, line_box *l);
 void render_buffer(render_def *rd);
 void render_advance(render_def *rd);
+GLint bind_texture_to_uniform(const char *unif_name, GLuint shaderProgram, GLuint *tex, GLenum tex_num, GLint tex_idx);
+
+void render_start_depth_pass(render_def *rd);
+void render_start_screen_pass(render_def *rd);
+void render_depth_render_only(render_def *rd, bool use_tex);
+void render_screen_render_only(render_def *rd);
 
 #ifdef __cplusplus
 }

@@ -48,7 +48,7 @@ qbox *load_qubicle_boxes(const char *filename, int *size);
 unsigned char get_qalpha(qcolor *matrix, qsize *qs, int x, int y, int z);
 unsigned char get_qthing(qcolor *matrix, qsize *qs, int x, int y, int z);
 void get_qcolor(qcolor *matrix, qsize *qs, int x, int y, int z, qcolor *qc);
-int has_qthing(qcolor *matrix, qsize *qs, int x, int y, int z);
+int has_qthing(qcolor *matrix, qsize *qs, int x, int y, int z, int samexy);
 unsigned int get_surround(qcolor *matrix, qsize *qs, int x, int y, int z);
 
 #ifdef __cplusplus

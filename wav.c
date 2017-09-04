@@ -48,7 +48,7 @@ int16_t *load_wav(const char *filename, unsigned int *num_samples) {
 	}
 	int16_t *data = (int16_t *)malloc(data_header.cksize);
 	fread(data, data_header.cksize, 1, f);
-	*num_samples = data_header.cksize / 2;
+	*num_samples = data_header.cksize / 4;
 	fclose(f);
 	return data;
 }

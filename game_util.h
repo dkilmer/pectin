@@ -28,7 +28,7 @@ typedef struct {
 // light
 typedef struct {
 	vec4_t position;
-	vec3_t intensities;
+	vec3_t light_color;
 	float attenuation;
 	float ambient_coefficient;
 	float cone_angle;
@@ -86,8 +86,11 @@ typedef struct pobj {
 
 void init_screen(screen_def *s, int sw, int sh, int ts, bool ortho);
 void update_proj_mat(screen_def *s, bool ortho);
-mat4_t get_light_mat(screen_def *s, vec3_t light_pos);
-mat4_t get_light_bias_mat(screen_def *s, vec3_t light_pos);
+mat4_t get_directional_light_mat(screen_def *s, vec3_t light_pos, vec3_t look_at);
+mat4_t get_directional_light_bias_mat(screen_def *s, vec3_t light_pos, vec3_t look_at);
+mat4_t get_point_light_mat(screen_def *s, vec3_t light_pos, vec3_t cat, vec3_t up);
+mat4_t get_point_light_cube_mat(screen_def *s, vec3_t light_pos, vec3_t cat, vec3_t up);
+mat4_t get_point_light_bias_mat(screen_def *s, vec3_t light_pos, vec3_t cat, vec3_t up);
 void mouse_to_world(screen_def *s, int mx, int my, float *wx, float *wy);
 void print_screen_def(screen_def *s);
 void get_tile_range(screen_def *s, tile_range *tr, tile_range *level_range);

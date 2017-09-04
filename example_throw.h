@@ -1,8 +1,6 @@
-//
-// Created by David Kilmer on 7/22/17.
-//
-
 #ifndef PECTIN_EXAMPLE_THROW_H
 #define PECTIN_EXAMPLE_THROW_H
+
+void run_throw();
 
 #endif //PECTIN_EXAMPLE_THROW_H

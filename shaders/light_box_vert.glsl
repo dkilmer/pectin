@@ -9,9 +9,6 @@ out vec3 Color;
 out vec3 ScaleRot;
 out uvec3 SprOffset;
 
-uniform mat4 vp;
-uniform mat4 depth_bias_vp;
-
 void main()
 {
   Color = color;

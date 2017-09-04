@@ -31,10 +31,13 @@ void get_qcolor(qcolor *matrix, qsize *qs, int x, int y, int z, qcolor *qc) {
 	qc->a = c.a;
 }
 
-int has_qthing(qcolor *matrix, qsize *qs, int x, int y, int z) {
-	if (x<0 || y<0 || z<0 || x>=qs->size_x || y>=qs->size_y || z>=qs->size_z) {
-		return 0;
+int has_qthing(qcolor *matrix, qsize *qs, int x, int y, int z, int samexy) {
+	if (x<0 || y<0 || x>=qs->size_x || y>=qs->size_y) {
+		return 1;
 	}
+	if ((z < 0 || z>=qs->size_z)) return 0;
+	if (z < 0) z = 0;
+	if (z>=qs->size_z) z = qs->size_z-1;
 	qcolor c = matrix[(x + (y*qs->size_x) + (z*qs->size_x*qs->size_y))];
 	return (c.a == 0) ? 0 : 1;
 }
@@ -46,7 +49,8 @@ unsigned int get_surround(qcolor *matrix, qsize *qs, int x, int y, int z) {
 	for (int qz=z-1; qz<z+2; qz++) {
 		for (int qy=y-1; qy<y+2; qy++) {
 			for (int qx=x-1; qx<x+2; qx++) {
-				n = n | (has_qthing(matrix, qs, qx, qy, qz) << shft);
+				int samexy = (qx == x && qy == y);
+				n = n | (has_qthing(matrix, qs, qx, qy, qz, samexy) << shft);
 				shft++;
 			}
 		}

@@ -44,12 +44,12 @@ vec3 ApplyLight(Light light, vec3 normal, vec3 surfacePos, vec3 surfaceToCamera)
 	}
 
 	//ambient
-	//vec3 ambient = light.ambient_coefficient * surfaceColor * light.intensities;
+	//vec3 ambient = light.ambient_coefficient * surfaceColor * light.light_color;
 	vec3 ambient = light.ambient_coefficient * light.intensities;
 
 	//diffuse
 	float diffuseCoefficient = max(0.0, dot(normal, surfaceToLight));
-	//vec3 diffuse = diffuseCoefficient * surfaceColor * light.intensities;
+	//vec3 diffuse = diffuseCoefficient * surfaceColor * light.light_color;
 	vec3 diffuse = diffuseCoefficient * light.intensities;
 
 	//specular

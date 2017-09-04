@@ -42,9 +42,9 @@ void main() {
 	vec4 pos;
 
   FColor = Color[0];
-  emit_point(rotation, pt, vec3(-scale_x, -scale_y, 0.0), vec2(zx, oy));
-  emit_point(rotation, pt, vec3(-scale_x, scale_y, 0.0), vec2(zx, zy));
-  emit_point(rotation, pt, vec3(scale_x, -scale_y, 0.0), vec2(ox, oy));
-  emit_point(rotation, pt, vec3(scale_x, scale_y, 0.0), vec2(ox, zy));
+  emit_point(rotation, pt, vec3(-scale_x, -scale_y, pt.z), vec2(zx, oy));
+  emit_point(rotation, pt, vec3(-scale_x, scale_y, pt.z), vec2(zx, zy));
+  emit_point(rotation, pt, vec3(scale_x, -scale_y, pt.z), vec2(ox, oy));
+  emit_point(rotation, pt, vec3(scale_x, scale_y, pt.z), vec2(ox, zy));
   EndPrimitive();
 }

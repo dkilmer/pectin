@@ -13,7 +13,7 @@ void init_screen(screen_def *s, int sw, int sh, int ts, bool ortho) {
 	s->half_w = s->h_units / 2.0f;
 	s->half_h = s->v_units / 2.0f;
 	s->far = 200.0f;
-	s->fov = 50.0f;
+	s->fov = 45.0f;
 	s->cam_pos.x = s->half_w;
 	s->cam_pos.y = s->half_h;
 	float rads = (s->fov / 2.0f) * (float)ONE_DEG_IN_RAD;
@@ -31,23 +31,55 @@ void update_proj_mat(screen_def *s, bool ortho) {
 	vec3_t up = {0.0f, 1.0f, 0.0f};
 	mat4_t p_mat = (ortho) ? m4_ortho(-s->half_w, s->half_w, -s->half_h, s->half_h, s->far, s->near)
 			: m4_perspective(s->fov, aspect, s->near, s->far);
+	//mat4_t p_mat = (ortho) ? m4_ortho(0, s->half_w * 2, 0, s->half_h * 2, s->far, s->near)
+	//                       : m4_perspective(s->fov, aspect, s->near, s->far);
 	mat4_t v_mat = m4_look_at(s->cam_pos, cat, up);
 	mat4_t m_mat = m4_identity();
 	s->vp_mat = m4_mul(m4_mul(p_mat, v_mat), m_mat);
 }
 
-mat4_t get_light_mat(screen_def *s, vec3_t light_pos) {
+mat4_t get_directional_light_mat(screen_def *s, vec3_t light_pos, vec3_t look_at) {
 	//vec3_t cat = {light_pos.x, light_pos.y, light_pos.z};
-	vec3_t cat = {0.0f, 0.0f, 0.0f};
+	//vec3_t cat = {0.0f, 0.0f, 0.0f};
+	//vec3_t cat = {s->cam_pos.x, s->cam_pos.y-10.0f, 0.0f};
+
 	vec3_t up = {0.0f, 1.0f, 0.0f};
-	mat4_t p_mat = m4_ortho(-s->half_w * 3.0f, s->half_w * 3.0f, -s->half_h * 3.0f, s->half_h * 3.0f, 1000.0f, 0.1f);
+	float mult = 2.2f;
+	mat4_t p_mat = m4_ortho(-s->half_w * mult, s->half_w * mult, -s->half_h * mult, s->half_h * mult, 200.0f, 10.0f);
+	mat4_t v_mat = m4_look_at(light_pos, look_at, up);
+	mat4_t m_mat = m4_identity();
+	return m4_mul(m4_mul(p_mat, v_mat), m_mat);
+}
+
+mat4_t get_directional_light_bias_mat(screen_def *s, vec3_t light_pos, vec3_t look_at) {
+	mat4_t depth_mvp_mat = get_directional_light_mat(s, light_pos, look_at);
+	mat4_t bias_mat = {
+		0.5, 0.0, 0.0, 0.0,
+		0.0, 0.5, 0.0, 0.0,
+		0.0, 0.0, 0.5, 0.0,
+		0.5, 0.5, 0.5, 1.0
+	};
+	return m4_mul(bias_mat, depth_mvp_mat);
+}
+
+mat4_t get_point_light_mat(screen_def *s, vec3_t light_pos, vec3_t cat, vec3_t up) {
+	float aspect = (float)s->screen_w / (float)s->screen_h; // aspect ratio
+	mat4_t p_mat = m4_perspective(90.0f, aspect, 0.1f, 300.0f);
 	mat4_t v_mat = m4_look_at(light_pos, cat, up);
 	mat4_t m_mat = m4_identity();
 	return m4_mul(m4_mul(p_mat, v_mat), m_mat);
 }
 
-mat4_t get_light_bias_mat(screen_def *s, vec3_t light_pos) {
-	mat4_t depth_mvp_mat = get_light_mat(s, light_pos);
+mat4_t get_point_light_cube_mat(screen_def *s, vec3_t light_pos, vec3_t cat, vec3_t up) {
+	float aspect = 1.0f;//(float)s->screen_w / (float)s->screen_h; // aspect ratio
+	mat4_t p_mat = m4_perspective(90.0f, aspect, 1.0f, 60.0f);
+	mat4_t v_mat = m4_look_at(light_pos, cat, up);
+	mat4_t m_mat = m4_identity();
+	return m4_mul(m4_mul(p_mat, v_mat), m_mat);
+}
+
+mat4_t get_point_light_bias_mat(screen_def *s, vec3_t light_pos, vec3_t cat, vec3_t up) {
+	mat4_t depth_mvp_mat = get_point_light_mat(s, light_pos, cat, up);
 	mat4_t bias_mat = {
 		0.5, 0.0, 0.0, 0.0,
 		0.0, 0.5, 0.0, 0.0,
