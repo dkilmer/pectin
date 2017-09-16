@@ -39,7 +39,6 @@ void main() {
   float zy = float(row) * tex_mult.y;
   float ox = zx + tex_mult.x;
   float oy = zy + tex_mult.y;
-	vec4 pos;
 
   FColor = Color[0];
   emit_point(rotation, pt, vec3(-scale_x, -scale_y, pt.z), vec2(zx, oy));

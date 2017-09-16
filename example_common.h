@@ -4,8 +4,8 @@
 #include <time.h>
 #include "render_util.h"
 
-#define SCREEN_W 1024
-#define SCREEN_H 640
+//#define SCREEN_W 1024
+//#define SCREEN_H 640
 
 #define LEFT    1
 #define ABOVE   2
@@ -16,6 +16,8 @@
 
 typedef struct timespec timespec;
 
+int screen_w;
+int screen_h;
 int *level;
 int level_w;
 int level_h;

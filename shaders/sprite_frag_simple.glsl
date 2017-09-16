@@ -13,5 +13,6 @@ void main() {
   vec4 DiffuseColor = texture(tex, TexCoord);
   if (DiffuseColor.a < 0.4) discard;
   //outColor = vec4(FColor.rgb, DiffuseColor.a);
-  outColor = DiffuseColor;
+  outColor = vec4(DiffuseColor.rgb * FColor, DiffuseColor.a);
+  //outColor = vec4(1.0);
 }

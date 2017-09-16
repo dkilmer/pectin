@@ -15,6 +15,8 @@ int rand_int(int mod);
 unsigned int rand_uint(unsigned int mod);
 float oscillate(float val, float min, float range);
 float elastic(float p);
+float signum(float x);
+float intbound(float s, float ds);
 
 #ifdef __cplusplus
 }

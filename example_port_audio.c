@@ -70,6 +70,10 @@ static int pa_callback(const void *inputBuffer, void *outputBuffer,
 }
 
 void run_port() {
+	screen_w = 1024;
+	screen_h = 640;
+	if (!init_window("test sdl_ogl", screen_w, screen_h)) return;
+	print_sdl_gl_attributes();
 	font_kern = 1;
 	unsigned int num_samples = 0;
 	wav_data = load_wav("/Users/dmk/code/pectin/images/Untitled2.wav", &num_samples);
@@ -137,7 +141,7 @@ void run_port() {
 	// initialize the screen view
 	int pix_per_unit = 32;
 	screen_def sd;
-	init_screen(&sd, SCREEN_W, SCREEN_H, pix_per_unit, true);
+	init_screen(&sd, screen_w, screen_h, pix_per_unit, true);
 	print_screen_def(&sd);
 
 	PaError paerr = Pa_Initialize();
@@ -171,7 +175,7 @@ void run_port() {
 	printf("-=-= beat_w is %f\n", beat_w);
 
 	float samples_per_pix = num_samples / ((float)pix_per_unit * 30.0f);
-	float units_per_pix = (float)pix_per_unit / (float)SCREEN_W;
+	float units_per_pix = (float)pix_per_unit / (float)screen_w;
 	printf("samples per pixel: %f\n", samples_per_pix);
 
 	srect *btns = (srect *)malloc(beats * sizeof(srect));
@@ -194,7 +198,7 @@ void run_port() {
 	line *project = (line *)malloc(20 * sizeof(line));
 
 	sprite *s = (sprite *)malloc(sizeof(sprite));
-	init_render_environment();
+	init_render_environment(false);
 
 	int advance = 0;
 	float tx = txt_x;

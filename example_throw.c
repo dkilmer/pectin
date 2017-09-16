@@ -120,6 +120,10 @@ void line_for(cpVect pos, cpFloat ang, cpFloat r, line *l) {
 
 
 void run_throw() {
+	screen_w = 1024;
+	screen_h = 640;
+	if (!init_window("test sdl_ogl", screen_w, screen_h)) return;
+	print_sdl_gl_attributes();
 	cpSpace *space = cpSpaceNew();
 	cpSpaceSetIterations(space, 10);
 	cpSpaceSetGravity(space, cpv(0, -30));
@@ -184,7 +188,7 @@ void run_throw() {
 
 	// initialize the screen view
 	screen_def sd;
-	init_screen(&sd, SCREEN_W, SCREEN_H, 32, true);
+	init_screen(&sd, screen_w, screen_h, 32, true);
 	//glViewport(-32, -32, 512, 320);
 	print_screen_def(&sd);
 
@@ -223,7 +227,7 @@ void run_throw() {
 	tile_range tr;
 	get_tile_range(&sd, &tr, &lr);
 	bool cam_moved = false;
-	init_render_environment();
+	init_render_environment(false);
 	for (int y=tr.b; y<tr.t; y++) {
 		for (int x=tr.l; x<tr.r; x++) {
 			int tidx = thing_at(x, y, 0);

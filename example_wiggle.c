@@ -66,6 +66,10 @@ void sprite_for_wiggle(float x, float y, int layer, int ridx, int cidx, sprite *
 
 
 void run_wiggle() {
+	screen_w = 1024;
+	screen_h = 640;
+	if (!init_window("test sdl_ogl", screen_w, screen_h)) return;
+	print_sdl_gl_attributes();
 	level_w = 64;
 	level_h = 40;
 	level_layers = 1;
@@ -100,7 +104,7 @@ void run_wiggle() {
 
 	// initialize the screen view
 	screen_def sd;
-	init_screen(&sd, SCREEN_W, SCREEN_H, 16, true);
+	init_screen(&sd, screen_w, screen_h, 16, true);
 	print_screen_def(&sd);
 
 	const char *config_filename = "/Users/dmk/code/pectin/config/wiggle_render_defs.cfg";
@@ -112,7 +116,7 @@ void run_wiggle() {
 	tile_range tr;
 	get_tile_range(&sd, &tr, &lr);
 	bool cam_moved = false;
-	init_render_environment();
+	init_render_environment(false);
 	for (int y=tr.b; y<tr.t; y++) {
 		for (int x=tr.l; x<tr.r; x++) {
 			int tidx = thing_at(x, y, 0);

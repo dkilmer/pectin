@@ -9,6 +9,81 @@
 
 int ccol = 0;
 
+bool raycast(vec3_t origin, vec3_t direction, float radius, qcolor *matrix, qsize *qs, vec3_t *block, int *face) {
+	block->x = 0;
+	block->y = 0;
+	block->z = 0;
+	*face = 0;
+	float x = floorf(origin.x);
+	float y = floorf(origin.y);
+	float z = floorf(origin.z);
+	float dx = direction.x;
+	float dy = direction.y;
+	float dz = direction.z;
+	float stepX = signum(dx);
+	float stepY = signum(dy);
+	float stepZ = signum(dz);
+	float tMaxX = intbound(origin.x, dx);
+	float tMaxY = intbound(origin.y, dy);
+	float tMaxZ = intbound(origin.z, dz);
+	float tDeltaX = stepX / dx;
+	float tDeltaY = stepY / dy;
+	float tDeltaZ = stepZ / dz;
+	radius /= sqrtf(dx*dx + dy*dy + dz*dz);
+	qcolor qc;
+
+	while ((x >= 0) && (x <= 32) && (y >=0) && (y <= 20) && (z >= -10)) {
+		if (z <= 0) {
+			get_qcolor(matrix, qs, (int)x, (int)y, -(int)z, &qc);
+			if (qc.a != 0) {
+				block->x = x;
+				block->y = y;
+				block->z = z;
+				return true;
+			}
+		}
+		if (tMaxX < tMaxY) {
+			if (tMaxX < tMaxZ) {
+				if (tMaxX > radius) {
+					printf("x: %f > %f\n",tMaxX, radius);
+					break;
+				}
+				x += stepX;
+				tMaxX += tDeltaX;
+				*face = (stepX < 0) ? 3 : 1;
+			} else {
+				if (tMaxZ > radius) {
+					printf("z: %f > %f\n",tMaxZ, radius);
+					break;
+				}
+				z += stepZ;
+				tMaxZ += tDeltaZ;
+				*face = (stepZ < 0) ? 0 : 5;
+			}
+		} else {
+			if (tMaxY < tMaxZ) {
+				if (tMaxY > radius) {
+					printf("y: %f > %f\n",tMaxY, radius);
+					break;
+				}
+				y += stepY;
+				tMaxY += tDeltaY;
+				*face = (stepY < 0) ? 2 : 4;
+			} else {
+				if (tMaxZ > radius) {
+					printf("z: %f > %f\n",tMaxZ, radius);
+					break;
+				}
+				z += stepZ;
+				tMaxZ += tDeltaZ;
+				*face = (stepZ < 0) ? 0 : 5;
+			}
+		}
+	}
+	//printf("exit with: %f, %f, %f\n",x,y,z);
+	return false;
+}
+
 void add_light(GLuint shader, int idx, light *l) {
 	char uname[1024];
 
@@ -40,6 +115,21 @@ GLint set_depth_mat(GLuint shader, int idx, mat4_t mat) {
 	return uloc;
 }
 
+void sprite_for_hilite(float x, float y, float z, unsigned int extra, sprite *s, render_def *rd) {
+	s->x = (x + 0.5f + rd->xoff);
+	s->y = (y + 0.5f + rd->yoff);
+	s->z = z;
+	s->r = 1.0;
+	s->g = 0.0;
+	s->b = 0.0;
+	s->scale_x = rd->xscale * 0.5f;
+	s->scale_y = rd->yscale * 0.5f;
+	s->rot = 0.0f;
+	s->spr_idx = 0;
+	s->spr_cols = rd->cols;
+	s->spr_extra = extra;
+}
+
 void sprite_for_box(float x, float y, float z, float zscale, int ridx, int cidx, unsigned int extra, sprite *s, render_def *rd) {
 	s->x = (x + 0.5f + rd->xoff);
 	s->y = (y + 0.5f + rd->yoff);
@@ -50,10 +140,10 @@ void sprite_for_box(float x, float y, float z, float zscale, int ridx, int cidx,
 	s->scale_x = rd->xscale * 0.5f;
 	s->scale_y = rd->yscale * 0.5f;
 	s->rot = 0.0f;
-	int col = rand_int(4);
+	//int col = rand_int(4)*2;
 	//int col = ccol % 4;
-	ccol++;
-	s->spr_idx = ((ridx * rd->cols) + col);
+	//ccol++;
+	s->spr_idx = ((ridx * rd->cols) + cidx);
 	s->spr_cols = rd->cols;
 	s->spr_extra = extra;
 }
@@ -73,9 +163,60 @@ void sprite_for_trif(float x, float y, float z, int ridx, int cidx, sprite *s, r
 	s->spr_extra = 15;
 }
 
+void set_line(line *ln, float x1, float y1, float z1, float x2, float y2, float z2) {
+	ln->p1.x = x1;
+	ln->p1.y = y1;
+	ln->p1.z = z1;
+	ln->p2.x = x2;
+	ln->p2.y = y2;
+	ln->p2.z = z2;
+	ln->p1.r = 1.0f;
+	ln->p1.g = 1.0f;
+	ln->p1.b = 1.0f;
+	ln->p2.r = 1.0f;
+	ln->p2.g = 1.0f;
+	ln->p2.b = 1.0f;
+}
 
+void get_chute(qcolor *matrix, qsize *qs, int x, int y, int z, int *row, int *col) {
+	qcolor l, r, u, d;
+	get_qcolor(matrix, qs, x-1, y, z, &l);
+	get_qcolor(matrix, qs, x+1, y, z, &r);
+	get_qcolor(matrix, qs, x, y+1, z, &u);
+	get_qcolor(matrix, qs, x, y-1, z, &d);
+	bool is_l = (l.b == 68 || l.b == 119);
+	bool is_r = (r.b == 68 || r.b == 119);
+	bool is_u = (u.b == 68 || u.b == 119);
+	bool is_d = (d.b == 68 || d.b == 119);
+	if (is_u && is_d) {
+		*row = 2;
+		*col = 2;
+	} else if (is_l && is_r) {
+		*row = 2;
+		*col = 4;
+	} else if (is_d && is_l) {
+		*row = 3;
+		*col = 0;
+	} else if (is_d && is_r) {
+		*row = 3;
+		*col = 2;
+	} else if (is_u && is_l) {
+		*row = 3;
+		*col = 4;
+	} else if (is_u && is_r) {
+		*row = 3;
+		*col = 6;
+	} else {
+		*row = 2;
+		*col = 2;
+	}
+}
 
 void run_box() {
+	screen_w = 1024;
+	screen_h = 704;
+	if (!init_window("test sdl_ogl", screen_w, screen_h)) return;
+	print_sdl_gl_attributes();
 	level_w = 32;
 	level_h = 20;
 	level_layers = 1;
@@ -105,7 +246,7 @@ void run_box() {
 	vec3_t trif;
 // initialize the screen view
 	screen_def sd;
-	init_screen(&sd, SCREEN_W, SCREEN_H, 32, false);
+	init_screen(&sd, screen_w, 640, 32, false);
 	//glViewport(-32, -32, 512, 320);
 	print_screen_def(&sd);
 	//mat4_t light_mat = get_point_light_mat(&sd, dlpos, v3_add(dlpos, dlcat), dlup);
@@ -137,6 +278,9 @@ void run_box() {
 	const char *config_filename = "/Users/dmk/code/pectin/config/box_render_defs.cfg";
 	// set up rendering for blocks
 	render_def *block_def = load_render_def(config_filename, "blocks", (GLfloat *)&sd.vp_mat, NULL, NULL);
+	render_def *hilite_def = load_render_def(config_filename, "highlight", (GLfloat *)&sd.vp_mat, NULL, NULL);
+	//render_def *line_def = load_render_def(config_filename, "lines", (GLfloat *)&sd.vp_mat, NULL, NULL);
+
 	// set up rendering for font
 	//render_def *font_def = load_render_def(config_filename, "font", (GLfloat *)&sd.vp_mat, NULL, NULL);
 	render_def *trif_def = load_render_def(config_filename, "trifle", (GLfloat *)&sd.vp_mat, NULL, NULL);
@@ -284,11 +428,12 @@ void run_box() {
 	*/
 
 	sprite *s = (sprite *)malloc(sizeof(sprite));
+	sprite *hs = (sprite *)malloc(sizeof(sprite));
 	tile_range lr = {0, 32, 0, 20};
 	tile_range tr;
 	get_tile_range(&sd, &tr, &lr);
 	bool cam_moved = false;
-	init_render_environment();
+	init_render_environment(true);
 	/*
 	for (int y=tr.b; y<tr.t; y++) {
 		for (int x=tr.l; x<tr.r; x++) {
@@ -315,8 +460,18 @@ void run_box() {
 				if (surround >= 0x7ffffff) continue;
 				if (surround < qmin) qmin = surround;
 				if (surround > qmax) qmax = surround;
-				int thing = (tc.b == 141) ? 0 : 1;
-				sprite_for_box((float)qx, (float)qy, (float)-qz, 1.0f, rand() % 2, thing, surround, s, block_def);
+				int row = 0;
+				int col = 0;
+				switch (tc.b) {
+					case 141: row = rand_int(2)+4; col = rand_int(4) * 2; break;
+					case 68: row = 2; col = 0; break;
+					case 119: {
+						get_chute(boxes, &qs, qx, qy, qz, &row, &col);
+						break;
+					}
+					default: row = rand_int(2)+4; col = rand_int(4) * 2;
+				}
+				sprite_for_box((float)qx, (float)qy, (float)-qz, 1.0f, row, col, surround, s, block_def);
 				render_sprite(block_def, s);
 				qcnt++;
 			}
@@ -332,6 +487,7 @@ void run_box() {
 		render_sprite(block_def, s);
 	}
 	*/
+
 	trif.x = 16.0f;
 	trif.y = 4.0f;
 	trif.z = -0.5f;
@@ -340,8 +496,17 @@ void run_box() {
 	int trif_col = 0;
 	int mult = 4;
 
+	vec3_t mouse_dir;
+	int face;
+	vec3_t hit_block;
+	vec3_t start_pt;
+	start_pt.x = sd.cam_pos.x+0.01f;
+	start_pt.y = sd.cam_pos.y+0.01f;
+	start_pt.z = sd.cam_pos.z+0.01f;
+
 	clock_gettime(CLOCK_REALTIME, &t1);
 	int frame = 0;
+	bool mouse_down = false;
 	while (loop) {
 		get_input(kdown, kpress, key_map, &mouse);
 		if (kpress[KEY_QUIT]) {
@@ -363,11 +528,35 @@ void run_box() {
 			dlpos.y -= 0.1f;
 			moved = true;
 		} else if (kdown[KEY_USE]) {
-			dlpos.z += 0.1f;
+			//dlpos.z += 0.1f;
 			moved = true;
 		} else if (kdown[KEY_GRAB]) {
-			dlpos.z -= 0.1f;
+			//dlpos.z -= 0.1f;
 			moved = true;
+		}
+
+		mouse_dir.x = (((float)mouse.x / 32.0f)-0.0f) - sd.cam_pos.x;
+		mouse_dir.y = (((float)(640 - mouse.y) / 32.0f)-0.0f) - sd.cam_pos.y;
+		mouse_dir.z = -start_pt.z + 1.0f;// - 0.5f;
+		raycast(start_pt, mouse_dir, 40, boxes, &qs, &hit_block, &face);
+
+		if (mouse.ldown) {
+			if (!mouse_down) {
+				/*
+				mouse_dir.x = (((float)mouse.x / 32.0f)-0.5f) - sd.cam_pos.x;
+				mouse_dir.y = (((float)(640 - mouse.y) / 32.0f)-0.5f) - sd.cam_pos.y;
+				mouse_dir.z = -sd.cam_pos.z;
+				if (raycast(sd.cam_pos, mouse_dir, 40, boxes, &qs, &hit_block, &face)) {
+					printf("%f, %f\n", wmx, wmy);
+					printf("hit: (%f,%f,%f), face(%d)\n",hit_block.x, hit_block.y, hit_block.z, face);
+				} else {
+					printf("no hit\n");
+				}
+				*/
+			}
+			mouse_down = true;
+		} else {
+			mouse_down = false;
 		}
 
 		if (moved) {
@@ -447,19 +636,25 @@ void run_box() {
 		sprite_for_trif(trif.x, trif.y, trif.z, trif_row, (trif_col / mult), &ts, trif_def);
 		render_sprite(trif_def, &ts);
 
+		render_advance(hilite_def);
+		sprite_for_hilite(hit_block.x, hit_block.y, hit_block.z, (unsigned int)face, hs, hilite_def);
+		render_sprite(hilite_def, hs);
+
 		//render_buffer(font_def);
-		//render_buffer(trif_def);
 		render_screen_render_only(block_def);
 		render_screen_render_only(trif_def);
+		render_screen_render_only(hilite_def);
 
 		swap_window();
 		frame += 1;
 		if (frame == 60) frame = 0;
 	}
 	free(s);
+	free(hs);
 	free(boxes);
 	free_render_def(block_def);
 	//free_render_def(font_def);
 	free_render_def(trif_def);
+	free_render_def(hilite_def);
 }
 

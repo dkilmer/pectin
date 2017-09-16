@@ -516,15 +516,17 @@ void free_shader_program(GLuint shader_program) {
 	glDeleteProgram(shader_program);
 }
 
-void init_render_environment() {
+void init_render_environment(bool depth) {
 	glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
 	//glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
-	glEnable(GL_DEPTH_TEST);
-	glDepthFunc(GL_LESS);
-	//glFrontFace(GL_CW);
-	glEnable(GL_CULL_FACE);
-	glCullFace(GL_FRONT);
-	glDisable(GL_CLIP_PLANE0);
+	if (depth) {
+		glEnable(GL_DEPTH_TEST);
+		glDepthFunc(GL_LESS);
+		//glFrontFace(GL_CW);
+		glEnable(GL_CULL_FACE);
+		glCullFace(GL_FRONT);
+		glDisable(GL_CLIP_PLANE0);
+	}
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 }

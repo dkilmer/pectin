@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#include <stdbool.h>
 
 const char* load_file(const char *input_file_name) {
 	char *file_contents;
@@ -48,3 +49,14 @@ float elastic(float p) {
 		return (sinf((p+0.65f) * 4.0f * (float)M_PI)* 0.01f) + 1.0f;
 	}
 }
+
+float signum(float x) {
+	return x > 0 ? 1 : x < 0 ? -1 : 0;
+}
+
+float intbound(float s, float ds) {
+	bool is_int = (roundf(s) == s);
+	if (ds < 0 && is_int) return 0;
+	return ((ds > 0) ? ceilf(s)-s : s-floorf(s)) / fabsf(ds);
+}
+

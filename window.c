@@ -5,6 +5,12 @@ SDL_Window *main_window;
 SDL_GLContext main_context;
 SDL_GameController *controller;
 
+int is_mouse_event(void *userdata, SDL_Event* event)
+{
+	if (event->type == SDL_MOUSEMOTION)	return 0;
+	return 1;
+}
+
 bool init_window(const char *program_name, int w, int h)
 {
 	// Initialize SDL's Video subsystem
@@ -31,6 +37,7 @@ bool init_window(const char *program_name, int w, int h)
 		check_sdl_error(__LINE__);
 		return false;
 	}
+	SDL_SetEventFilter(&is_mouse_event, NULL);
 
 	// Create our opengl context and attach it to our window
 	main_context = SDL_GL_CreateContext(main_window);
@@ -240,12 +247,13 @@ void get_input(bool *downs, bool *presses, const int *key_map, mouse_input *mous
 					mouse->odown = false;
 					break;
 			}
-		} else if (e.type == SDL_MOUSEMOTION) {
-			//printf("mouse motion: (%d, %d)\n", e.motion.x, e.motion.y);
-			mouse->x = e.motion.x;
-			mouse->y = e.motion.y;
+		//} else if (e.type == SDL_MOUSEMOTION) {
+		//	//printf("mouse motion: (%d, %d)\n", e.motion.x, e.motion.y);
+		//	mouse->x = e.motion.x;
+		//	mouse->y = e.motion.y;
 		}
 	}
+	SDL_GetMouseState(&mouse->x, &mouse->y);
 }
 
 void set_default_key_map(int *key_map) {

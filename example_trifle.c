@@ -286,6 +286,10 @@ int handle_vert_collision(dobj *k, float *fixy) {
 }
 
 void run_trifle() {
+	screen_w = 1024;
+	screen_h = 640;
+	if (!init_window("test sdl_ogl", screen_w, screen_h)) return;
+	print_sdl_gl_attributes();
 	level_w = 32;
 	level_h = 20;
 	level_layers = 5;
@@ -319,7 +323,7 @@ void run_trifle() {
 
 	// initialize the screen view
 	screen_def sd;
-	init_screen(&sd, SCREEN_W, SCREEN_H, 32, true);
+	init_screen(&sd, screen_w, screen_h, 32, true);
 	//glViewport(-32, -32, 512, 320);
 	print_screen_def(&sd);
 
@@ -367,7 +371,7 @@ void run_trifle() {
 	tile_range tr;
 	get_tile_range(&sd, &tr, &lr);
 	bool cam_moved = false;
-	init_render_environment();
+	init_render_environment(false);
 	printf("l=%d, r=%d, t=%d, b=%d\n", tr.l, tr.r, tr.t, tr.b);
 	for (int l=0; l<level_layers; l++) {
 		for (int y=tr.b; y<tr.t; y++) {

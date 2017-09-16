@@ -6,20 +6,19 @@
 #include "example_box.h"
 #include "example_throw.h"
 #include "example_trifle.h"
+#include "example_pingpong.h"
+#include "level_editor.h"
 
 
 int main(int argc, char *argv[]) {
-	if (!init_window("test sdl_ogl", SCREEN_W, SCREEN_H)) {
-		return -1;
-	}
-	print_sdl_gl_attributes();
-
 	//run_trifle();
 	//run_wiggle();
 	//run_nine_slice();
 	//run_throw();
 	//run_trifle();
 	run_box();
+	//run_pingpong();
+	//run_level_editor();
 
 	cleanup_window();
 

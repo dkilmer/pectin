@@ -102,8 +102,8 @@ void main() {
   uint col = SprOffset[0].x % SprOffset[0].y;
   uint row = SprOffset[0].x / SprOffset[0].y;
   uint adj = SprOffset[0].z;
-  float thx = tex_mult.x;// * 0.25;
-  float thy = tex_mult.y;// * 0.25;
+  float thx = tex_mult.x * 0.25;
+  float thy = tex_mult.y * 0.25;
   float zx = tex_mult.x * float(col);
   float zy = tex_mult.y * float(row);
 
@@ -136,12 +136,18 @@ void main() {
 	sur[25] = ((adj & 0x2000000u) == 0x2000000u) ? 1u : 0u;
 	sur[26] = ((adj & 0x4000000u) == 0x4000000u) ? 1u : 0u;
 
-  vec2 tpa = vec2(zx, zy);
-  vec2 tpb = vec2(zx+thx, zy);
-  vec2 tpc = vec2(zx+thx+thx, zy);
-  vec2 tpd = vec2(zx, zy+thy);
-  vec2 tpe = vec2(zx+thx, zy+thy);
-  vec2 tpf = vec2(zx+thx+thx, zy+thy);
+  vec2 tpa = vec2(zx+thx, zy);
+  vec2 tpb = vec2(zx+thx+thx, zy);
+  vec2 tpc = vec2(zx, zy+thy);
+  vec2 tpd = vec2(zx+thx, zy+thy);
+  vec2 tpe = vec2(zx+thx+thx, zy+thy);
+  vec2 tpf = vec2(zx+thx+thx+thx, zy+thy);
+  vec2 tpg = vec2(zx, zy+thy+thy);
+  vec2 tph = vec2(zx+thx, zy+thy+thy);
+  vec2 tpi = vec2(zx+thx+thx, zy+thy+thy);
+  vec2 tpj = vec2(zx+thx+thx+thx, zy+thy+thy);
+  vec2 tpk = vec2(zx+thx, zy+thy+thy+thy);
+  vec2 tpl = vec2(zx+thx+thx, zy+thy+thy+thy);
 
 	vec4 pos;
 	vec3 norm;
@@ -150,47 +156,47 @@ void main() {
   // bottom
   if (sur[10] == 0u) {
 	  norm = vec3(0, -1, 0);
-	  emit_point(rotation, pt, vec3(scale_x, -scale_y, 0.0), tpc, norm, calc_occlusion(sur[1], sur[11], sur[2]));
-	  emit_point(rotation, pt, vec3(scale_x, -scale_y, -scale_z), tpf, norm, calc_occlusion(sur[11], sur[19], sur[20]));
-	  emit_point(rotation, pt, vec3(-scale_x, -scale_y, 0.0), tpb, norm, calc_occlusion(sur[1], sur[9], sur[0]));
-	  emit_point(rotation, pt, vec3(-scale_x, -scale_y, -scale_z), tpe, norm, calc_occlusion(sur[9], sur[19], sur[18]));
+	  emit_point(rotation, pt, vec3(scale_x, -scale_y, 0.0), tpi, norm, calc_occlusion(sur[1], sur[11], sur[2]));
+	  emit_point(rotation, pt, vec3(scale_x, -scale_y, -scale_z), tpl, norm, calc_occlusion(sur[11], sur[19], sur[20]));
+	  emit_point(rotation, pt, vec3(-scale_x, -scale_y, 0.0), tph, norm, calc_occlusion(sur[1], sur[9], sur[0]));
+	  emit_point(rotation, pt, vec3(-scale_x, -scale_y, -scale_z), tpk, norm, calc_occlusion(sur[9], sur[19], sur[18]));
 	  EndPrimitive();
   }
   // left
   if (sur[12] == 0u) {
 	  norm = vec3(-1, 0, 0);
-	  emit_point(rotation, pt, vec3(-scale_x, -scale_y, 0.0), tpc, norm, calc_occlusion(sur[3], sur[9], sur[0]));
-	  emit_point(rotation, pt, vec3(-scale_x, -scale_y, -scale_z), tpb, norm, calc_occlusion(sur[9], sur[21], sur[18]));
-	  emit_point(rotation, pt, vec3(-scale_x, scale_y, 0.0), tpf, norm, calc_occlusion(sur[3], sur[15], sur[6]));
-	  emit_point(rotation, pt, vec3(-scale_x, scale_y, -scale_z), tpe, norm, calc_occlusion(sur[15], sur[21], sur[24]));
+	  emit_point(rotation, pt, vec3(-scale_x, -scale_y, 0.0), tpd, norm, calc_occlusion(sur[3], sur[9], sur[0]));
+	  emit_point(rotation, pt, vec3(-scale_x, -scale_y, -scale_z), tpc, norm, calc_occlusion(sur[9], sur[21], sur[18]));
+	  emit_point(rotation, pt, vec3(-scale_x, scale_y, 0.0), tph, norm, calc_occlusion(sur[3], sur[15], sur[6]));
+	  emit_point(rotation, pt, vec3(-scale_x, scale_y, -scale_z), tpg, norm, calc_occlusion(sur[15], sur[21], sur[24]));
 	  EndPrimitive();
 	}
   // right
   if (sur[14] == 0u) {
 	  norm = vec3(1, 0, 0);
-	  emit_point(rotation, pt, vec3(scale_x, scale_y, 0.0), tpb, norm, calc_occlusion(sur[5], sur[17], sur[8]));
-	  emit_point(rotation, pt, vec3(scale_x, scale_y, -scale_z), tpc, norm, calc_occlusion(sur[17], sur[23], sur[26]));
-	  emit_point(rotation, pt, vec3(scale_x, -scale_y, 0.0), tpe, norm, calc_occlusion(sur[5], sur[11], sur[2]));
-	  emit_point(rotation, pt, vec3(scale_x, -scale_y, -scale_z), tpf, norm, calc_occlusion(sur[11], sur[23], sur[20]));
+	  emit_point(rotation, pt, vec3(scale_x, scale_y, 0.0), tpe, norm, calc_occlusion(sur[5], sur[17], sur[8]));
+	  emit_point(rotation, pt, vec3(scale_x, scale_y, -scale_z), tpf, norm, calc_occlusion(sur[17], sur[23], sur[26]));
+	  emit_point(rotation, pt, vec3(scale_x, -scale_y, 0.0), tpi, norm, calc_occlusion(sur[5], sur[11], sur[2]));
+	  emit_point(rotation, pt, vec3(scale_x, -scale_y, -scale_z), tpj, norm, calc_occlusion(sur[11], sur[23], sur[20]));
 	  EndPrimitive();
 	}
   // top
   if (sur[16] == 0u) {
 	  norm = vec3(0, 1, 0);
-	  emit_point(rotation, pt, vec3(-scale_x, scale_y, 0.0), tpe, norm, calc_occlusion(sur[7], sur[15], sur[6]));
-	  emit_point(rotation, pt, vec3(-scale_x, scale_y, -scale_z), tpb, norm, calc_occlusion(sur[15], sur[25], sur[24]));
-	  emit_point(rotation, pt, vec3(scale_x, scale_y, 0.0), tpf, norm, calc_occlusion(sur[7], sur[17], sur[8]));
-	  emit_point(rotation, pt, vec3(scale_x, scale_y, -scale_z), tpc, norm, calc_occlusion(sur[17], sur[25], sur[26]));
+	  emit_point(rotation, pt, vec3(-scale_x, scale_y, 0.0), tpd, norm, calc_occlusion(sur[7], sur[15], sur[6]));
+	  emit_point(rotation, pt, vec3(-scale_x, scale_y, -scale_z), tpa, norm, calc_occlusion(sur[15], sur[25], sur[24]));
+	  emit_point(rotation, pt, vec3(scale_x, scale_y, 0.0), tpe, norm, calc_occlusion(sur[7], sur[17], sur[8]));
+	  emit_point(rotation, pt, vec3(scale_x, scale_y, -scale_z), tpb, norm, calc_occlusion(sur[17], sur[25], sur[26]));
 	  EndPrimitive();
 	}
   // front
   // if (sur[4] == 1u) {
   if ((adj & 0x10u) == 0u) {
 	  norm = vec3(0, 0, 1);
-	  emit_point(rotation, pt, vec3(-scale_x, -scale_y, 0.0), tpd, norm, calc_occlusion(sur[1], sur[3], sur[0]));
-	  emit_point(rotation, pt, vec3(-scale_x, scale_y, 0.0), tpa, norm, calc_occlusion(sur[3], sur[7], sur[6]));
-	  emit_point(rotation, pt, vec3(scale_x, -scale_y, 0.0), tpe, norm, calc_occlusion(sur[1], sur[5], sur[2]));
-	  emit_point(rotation, pt, vec3(scale_x, scale_y, 0.0), tpb, norm, calc_occlusion(sur[5], sur[7], sur[8]));
+	  emit_point(rotation, pt, vec3(-scale_x, -scale_y, 0.0), tph, norm, calc_occlusion(sur[1], sur[3], sur[0]));
+	  emit_point(rotation, pt, vec3(-scale_x, scale_y, 0.0), tpd, norm, calc_occlusion(sur[3], sur[7], sur[6]));
+	  emit_point(rotation, pt, vec3(scale_x, -scale_y, 0.0), tpi, norm, calc_occlusion(sur[1], sur[5], sur[2]));
+	  emit_point(rotation, pt, vec3(scale_x, scale_y, 0.0), tpe, norm, calc_occlusion(sur[5], sur[7], sur[8]));
 	  EndPrimitive();
 	}
 }

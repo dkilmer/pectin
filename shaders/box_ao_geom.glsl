@@ -1,7 +1,5 @@
 #version 330 core
 
-#define MAX_LIGHTS 10
-
 layout(points) in;
 layout(triangle_strip, max_vertices = 20) out;
 
@@ -18,7 +16,6 @@ out vec3 Normal;
 
 uniform mat4 vp;
 uniform vec2 tex_mult;
-uniform int num_lights;
 uniform struct Light {
 	vec4 position;
 	vec3 light_color;
@@ -26,41 +23,19 @@ uniform struct Light {
 	float ambient_coefficient;
 	float cone_angle;
 	vec3 cone_direction;
-} all_lights[MAX_LIGHTS];
+} pt_light;
 uniform vec3 camera_pos;
 
 vec3 ApplyLight(Light light, vec3 normal, vec3 surfacePos, vec3 surfaceToCamera) {
 	vec3 surfaceToLight;
 	float attenuation = 1.0;
-	if(light.position.w == 0.0) {
-		//directional light
-		surfaceToLight = normalize(light.position.xyz);
-		attenuation = 1.0; //no attenuation for directional lights
-	} else {
-		//point light
-		surfaceToLight = normalize(light.position.xyz - surfacePos);
-		float distanceToLight = length(surfacePos - light.position.xyz);
-		attenuation = 1.0 / (1.0 + light.attenuation * pow(distanceToLight, 2));
-	}
 
-	//ambient
-	//vec3 ambient = light.ambient_coefficient * surfaceColor * light.light_color;
+	surfaceToLight = normalize(light.position.xyz - surfacePos);
+	float distanceToLight = length(surfacePos - light.position.xyz);
+	attenuation = 1.0 / (1.0 + light.attenuation * pow(distanceToLight, 2));
 	vec3 ambient = light.ambient_coefficient * light.light_color;
-
-	//diffuse
 	float diffuseCoefficient = max(0.0, dot(normal, surfaceToLight));
-	//vec3 diffuse = diffuseCoefficient * surfaceColor * light.light_color;
 	vec3 diffuse = diffuseCoefficient * light.light_color;
-
-	//specular
-	//	float specularCoefficient = 0.0;
-	//	if(diffuseCoefficient > 0.0)
-	//		specularCoefficient = pow(max(0.0, dot(surfaceToCamera, reflect(-surfaceToLight, normal))), shininess);
-	//	vec3 specular = specularCoefficient * spec_color * light.light_color;
-
-	//linear color (color before gamma correction)
-	//return ambient + attenuation*(diffuse + specular);
-	//return diffuse + attenuation;
 	return attenuation*diffuse;
 }
 
@@ -68,10 +43,7 @@ vec3 ApplyLight(Light light, vec3 normal, vec3 surfacePos, vec3 surfaceToCamera)
 void emit_point(mat3 rotation, vec3 pt, vec3 offset, vec2 tc, vec3 norm, float occ) {
 	vec4 pos = vec4((rotation * offset) + pt, 1.0);
 	vec3 surfaceToCamera = normalize(camera_pos - pos.xyz);
-	vec3 linearColor = vec3(0);
-	for(int i = 0; i < num_lights; i++){
-		linearColor += ApplyLight(all_lights[i], norm, pos.xyz, surfaceToCamera);
-	}
+	vec3 linearColor = ApplyLight(pt_light, norm, pos.xyz, surfaceToCamera);
   gl_Position = vp * pos;
   Occlusion = vec3(occ);
 	TexCoord = tc;
@@ -143,7 +115,6 @@ void main() {
   vec2 tpe = vec2(zx+thx, zy+thy);
   vec2 tpf = vec2(zx+thx+thx, zy+thy);
 
-	vec4 pos;
 	vec3 norm;
 	FColor = Color[0];
 
@@ -184,8 +155,7 @@ void main() {
 	  EndPrimitive();
 	}
   // front
-  // if (sur[4] == 1u) {
-  if ((adj & 0x10u) == 0u) {
+  if (sur[4] == 0u) {
 	  norm = vec3(0, 0, 1);
 	  emit_point(rotation, pt, vec3(-scale_x, -scale_y, 0.0), tpd, norm, calc_occlusion(sur[1], sur[3], sur[0]));
 	  emit_point(rotation, pt, vec3(-scale_x, scale_y, 0.0), tpa, norm, calc_occlusion(sur[3], sur[7], sur[6]));
