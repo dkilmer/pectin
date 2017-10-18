@@ -122,6 +122,7 @@ render_def *load_render_def(const char *filename, const char *section, GLfloat *
 GLint load_texture_to_uniform(const char *filename, const char *unif_name, GLuint shaderProgram, GLuint *tex, GLenum tex_num, GLint tex_idx);
 GLuint create_shader_program(const char *vert_file_name, const char *frag_file_name, bool depth);
 void create_sprite_shader_program(render_def *rd);
+void create_pbox_shader_program(render_def *rd);
 void create_line_shader_program(render_def *rd);
 void create_vector_shader_program(render_def *rd);
 void create_vbox_shader_program(render_def *rd);

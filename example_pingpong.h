@@ -5,7 +5,7 @@
 #ifndef PECTIN_EXAMPLE_PINGPONG_H
 #define PECTIN_EXAMPLE_PINGPONG_H
 
-#define NUM_POINTS  100
+#define NUM_POINTS  500
 
 void run_pingpong();
 

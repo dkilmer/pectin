@@ -94,7 +94,7 @@ void save_blank_level(const char *filename) {
 	for (int z=0; z<l->size_z; z++) {
 		for (int y=0; y<l->size_y; y++) {
 			for (int x=0; x<l->size_x; x++) {
-				int32_t v = (z == 3) ? 0 : -1;
+				int32_t v = -1; //(z == 3) ? 0 : -1;
 				set_vox_at(l, x, y, z, v);
 			}
 		}
@@ -406,6 +406,9 @@ void run_level_editor() {
 	int bs;
 	int show_layers = 4;
 	char digit[4];
+	int lstx = -1;
+	int lsty = -1;
+	int lstz = -1;
 	while (loop) {
 		get_input(kdown, kpress, key_map, &mouse);
 		float mx = ((float)mouse.x / 32.0f);
@@ -425,28 +428,50 @@ void run_level_editor() {
 				mv_step = mv_frames;
 			}
 			if (mouse.ldown) {
-				for (int i=0; i<NUM_BTNS; i++) {
+				for (int i = 0; i < NUM_BTNS; i++) {
 					bs = (in_button(&btns[i], mx, my)) ? BST_DOWN : BST_NORMAL;
 					set_button_state(&btns[i], bs);
 				}
 				if (!mouse_down) {
-					int nx = (int)hit_block.x;
-					int ny = (int)hit_block.y;
-					int nz = -((int)hit_block.z);
+					int nx = (int) hit_block.x;
+					int ny = (int) hit_block.y;
+					int nz = -((int) hit_block.z);
 					switch (face) {
-						case 0: nz -= 1; break;
-						case 1: nx -= 1; break;
-						case 2: ny += 1; break;
-						case 3: nx += 1; break;
-						case 4: ny -= 1; break;
-						default: break;
+						case 0:
+							nz -= 1;
+							break;
+						case 1:
+							nx -= 1;
+							break;
+						case 2:
+							ny += 1;
+							break;
+						case 3:
+							nx += 1;
+							break;
+						case 4:
+							ny -= 1;
+							break;
+						default:
+							break;
 					}
-					if (nx >= 0 && nx < (int)l->size_x && ny >= 0 && ny < (int)l->size_y && nz >= 0 && nz < (int)l->size_z) {
+					if (nx >= 0 && nx < (int) l->size_x && ny >= 0 && ny < (int) l->size_y && nz >= 0 && nz < (int) l->size_z) {
 						set_vox_at(l, nx, ny, nz, 0);
 					}
 					// do something
 				}
 				mouse_down = true;
+			} else if (mouse.rdown) {
+				//if (!mouse_down) {
+					int nx = (int) hit_block.x;
+					int ny = (int) hit_block.y;
+					int nz = -((int) hit_block.z);
+					if (nx >= 0 && nx < (int) l->size_x && ny >= 0 && ny < (int) l->size_y && nz >= 0 && nz < (int) l->size_z) {
+						//printf("setting vox at %d %d %d\n", nx, ny, nz);
+						set_vox_at(l, nx, ny, nz, -1);
+					}
+					mouse_down = true;
+				//}
 			} else {
 				int the_down = -1;
 				for (int i=0; i<NUM_BTNS; i++) {

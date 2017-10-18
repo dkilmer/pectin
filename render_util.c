@@ -89,6 +89,8 @@ render_def *load_render_def(const char *filename, const char *section, GLfloat *
 	// create the shaders and buffers depending on the type
 	if (strcmp(rd->shader_type, "sprite") == 0) {
 		create_sprite_shader_program(rd);
+	} else if (strcmp(rd->shader_type, "pbox") == 0) {
+		create_pbox_shader_program(rd);
 	} else if (strcmp(rd->shader_type, "line") == 0) {
 		create_line_shader_program(rd);
 	} else if (strcmp(rd->shader_type, "vector") == 0) {
@@ -466,6 +468,22 @@ void create_sprite_shader_program(render_def *rd) {
 			glUseProgram(rd->depth_shader);
 			set_sprite_uint_render_attribs(rd->depth_shader, rd->uitem_size);
 		}
+	}
+}
+
+void create_pbox_shader_program(render_def *rd) {
+	rd->shader = create_geom_shader_program(rd->vert_shader, rd->geom_shader, rd->frag_shader, false);
+	glUseProgram(rd->shader);
+	GLint viewProjUnif = glGetUniformLocation(rd->shader, "vp");
+	glUniformMatrix4fv(viewProjUnif, 1, GL_FALSE, rd->vp_mat);
+	rd->vp_unif = viewProjUnif;
+	create_sprite_render_buf(rd);
+	glBindVertexArray(rd->vao);
+	glBindBuffer(GL_ARRAY_BUFFER, rd->vbo);
+	set_sprite_float_render_attribs(rd->shader, rd->item_size);
+	if (rd->uitem_size > 0) {
+		glBindBuffer(GL_ARRAY_BUFFER, rd->vbou);
+		set_sprite_uint_render_attribs(rd->shader, rd->uitem_size);
 	}
 }
 

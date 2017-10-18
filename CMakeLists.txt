@@ -1,33 +1,48 @@
 cmake_minimum_required(VERSION 3.6)
 project(pectin)
 
-if(MSVC)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W4")
-else()
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
-    if(NOT WIN32)
-        set(GLAD_LIBRARIES dl)
-    endif()
+if(WIN32)
+    # for Windows operating system in general
+    message("-=-= cmake detected WIN32")
+    link_directories("deps/chipmunk/lib/win32"
+        "deps/portaudio/lib/win32"
+        "deps/sdl2/lib/win32")
 endif()
 
-set(CHIPMUNK_LIBRARIES chipmunk)
+if(APPLE)
+    # for MacOS X
+    message("-=-= cmake detected APPLE")
+    link_directories("deps/chipmunk/lib/macos"
+        "deps/portaudio/lib/macos"
+        "deps/sdl2/lib/macos")
+endif()
 
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${PROJECT_SOURCE_DIR}/cmake")
+if(UNIX AND NOT APPLE)
+    # for Linux, BSD, Solaris, Minix
+    message("-=-= cmake detected UNIX")
+    set(GLAD_LIBRARIES dl)
+    link_directories("deps/chipmunk/lib/linux"
+        "deps/portaudio/lib/linux"
+        "deps/sdl2/lib/linux")
+endif()
+
+set(CHIPMUNK_LIBRARY chipmunk)
+set(PORTAUDIO_LIBRARY portaudio)
+set(SDL2_LIBRARY SDL2)
+
 set(CMAKE_MACOSX_RPATH 1)
 
 include_directories("deps/glad/include/"
         "deps/stb"
         "deps/portaudio/include/"
-        ${SDL2_INCLUDE_DIR}
-        ${SDLMIXER_INCLUDE_DIR})
+        "deps/chipmunk/include"
+        "deps/sdl2/include")
+
+#link_directories("/usr/local/lib")
 
 file(GLOB DEPS_SOURCES deps/glad/src/glad.c)
 file(GLOB PROJECT_HEADERS *.hpp *.h)
 file(GLOB PROJECT_SOURCES *.cpp *.c)
-file(GLOB PROJECT_SHADERS shaders/*.glsl
-        shaders/*.frag
-        shaders/*.geom
-        shaders/*.vert)
 
 source_group("include" FILES ${PROJECT_HEADERS})
 source_group("shaders" FILES ${PROJECT_SHADERS})
@@ -39,15 +54,10 @@ add_definitions(-DPROJECT_SOURCE_DIR=\"${PROJECT_SOURCE_DIR}\")
 add_executable(${PROJECT_NAME} ${PROJECT_SOURCES}
         ${PROJECT_HEADERS}
         ${PROJECT_SHADERS}
-        ${PROJECT_CONFIGS}
         ${DEPS_SOURCES})
 
 set_target_properties(${PROJECT_NAME} PROPERTIES
         LINKER_FLAGS "/ignore:4099")
 
-file(GLOB PORTAUDIO_LIBRARY "deps/portaudio/lib/libportaudio.dylib")
-find_package(SDL2 REQUIRED)
-find_package(SDL2_mixer REQUIRED)
-
-target_link_libraries(${PROJECT_NAME} ${GLAD_LIBRARIES} ${CHIPMUNK_LIBRARIES} ${SDL2_LIBRARY}
-        ${SDLMIXER_LIBRARY} ${PORTAUDIO_LIBRARY})
+target_link_libraries(${PROJECT_NAME} ${GLAD_LIBRARIES} ${CHIPMUNK_LIBRARY} ${SDL2_LIBRARY}
+        ${PORTAUDIO_LIBRARY})

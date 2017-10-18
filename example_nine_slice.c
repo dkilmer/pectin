@@ -4,6 +4,7 @@
 #include "game_util.h"
 #include "window.h"
 #include "physics.h"
+#include <stdlib.h>
 
 void sprite_for_extra(float x, float y, int layer, int ridx, int cidx, int extra, sprite *s, render_def *rd) {
 	s->x = (x + 0.5f + rd->xoff) + (rd->layer_xoff * (float)layer);

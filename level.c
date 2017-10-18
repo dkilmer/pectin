@@ -84,6 +84,9 @@ void free_level(lev *l) {
 }
 
 int32_t vox_at(lev *l, int x, int y, int z) {
+	if (z == l->size_z) {
+		return 0;
+	}
 	if (x < 0) {
 		x += l->size_x;
 	} else if (x >= l->size_x) {
@@ -97,6 +100,7 @@ int32_t vox_at(lev *l, int x, int y, int z) {
 
 void set_vox_at(lev *l, int x, int y, int z, int32_t v) {
 	if (x<0 || y<0 || z<0 || x>=l->size_x || y>=l->size_y || z>=l->size_z) {
+		printf("not setting\n");
 		return;
 	}
 	l->vox[(x + (y*l->size_x) + (z*l->size_x*l->size_y))] = v;
