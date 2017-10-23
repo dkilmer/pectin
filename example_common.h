@@ -30,5 +30,6 @@ extern int font_space[];
 double time_diff_d(timespec start, timespec end);
 int thing_at(int x, int y, int layer);
 void sprite_for(float x, float y, int layer, int ridx, int cidx, sprite *s, render_def *rd);
+void show_err(const char *prefix);
 
 #endif //PECTIN_EXAMPLE_COMMON_H

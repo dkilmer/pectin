@@ -1,5 +1,5 @@
 #include "example_common.h"
-
+#include <stdio.h>
 //int screen_w = 1024;
 //int screen_h = 640;
 
@@ -50,3 +50,11 @@ int thing_at(int x, int y, int layer) {
 	if (off < 0 || off >= (level_w * level_h * level_layers)) return 0;
 	return level[off];
 }
+
+void show_err(const char *prefix) {
+	GLenum err = glGetError();
+	if (err != GL_NO_ERROR) {
+		printf("%s: %d\n", prefix, err);
+	}
+}
+

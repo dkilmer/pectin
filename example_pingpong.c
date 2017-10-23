@@ -15,13 +15,6 @@ GLfloat full_screen_quad[] = {
 	0.0f, 1.0f, 0.0f
 };
 
-void show_err(const char *prefix) {
-	GLenum err = glGetError();
-	if (err != GL_NO_ERROR) {
-		printf("%s: %d\n", prefix, err);
-	}
-}
-
 void run_pingpong() {
 	screen_w = 512;
 	screen_h = 512;
