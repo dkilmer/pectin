@@ -58,8 +58,8 @@ void run_diffusion() {
 		}
 	}
 
-	int splotch_w = (screen_w / 20);
-	int splotch_h = (screen_h / 20);
+	int splotch_w = (screen_w / 10);
+	int splotch_h = (screen_h / 10);
 	int startx = (screen_w - splotch_w) / 2;
 	int starty = (screen_h - splotch_h) / 2;
 	for (int y=starty; y<(starty+splotch_h); y++) {
@@ -81,6 +81,18 @@ void run_diffusion() {
 			tex_data[idx++] = 1.0f;
 		}
 	}
+
+	startx = (screen_w - splotch_w) / 4;
+	starty = (screen_h - splotch_h) / 4;
+	for (int y=starty; y<(starty+splotch_h); y++) {
+		for (int x=startx; x<(startx+splotch_w); x++) {
+			int idx = ((y * screen_w) + x) * 3;
+			tex_data[idx++] = 1.0f;
+			tex_data[idx++] = 0.0f;
+			tex_data[idx++] = 1.0f;
+		}
+	}
+
 
 	GLuint ppFb[2];
 	GLuint ppTex[2];
@@ -109,12 +121,12 @@ void run_diffusion() {
 	// regular
 	//float f = 0.037f;
 	//float k = 0.06f;
-	float f = 0.055f;
-	float k = 0.062f;
+
+	//float f = 0.055f;
+	//float k = 0.062f;
 	// mitosis
-	//float f = 0.043f;
-	//float k = 0.0612f;
-	float lap[] = {0.05f, 0.2f, 0.05f, 0.2f, -1.0f, 0.2f, 0.05f, 0.2f, 0.05f};
+	float f = 0.0367f;
+	float k = 0.064f;
 
 	glUseProgram(calc_shader);
 	GLint lposAttrib = glGetAttribLocation(calc_shader, "position");
